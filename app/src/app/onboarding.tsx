@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useApp } from '../state/AppStateContext';
 import { newId } from '../state/useAppState';
-import { Button, s as shared, useBackToClose } from '../ui/components';
+import { splitSpoken } from '../domain/spoken';
+import { useDictation } from '../state/voice';
+import { Button, MicButton, s as shared, useBackToClose, useMic } from '../ui/components';
 import { copy } from '../ui/copy';
 import { Screen, screenStyles } from '../ui/Screen';
 import { colors, fonts, space } from '../ui/theme';
@@ -27,7 +29,23 @@ export default function Onboarding() {
   const [choices, setChoices] = useState<Record<string, Choice>>({});
   const [becoming, setBecoming] = useState('');
 
-  const go = (next: Step) => setStep(next);
+  const [voiced, setVoiced] = useState<Set<string>>(new Set());
+  const [hint, setHint] = useState<string | null>(null);
+  const dumpInput = useRef<TextInput>(null);
+  // Spoken items land in the dump one per line, so they can be fixed before moving on.
+  const dictation = useDictation((said) => {
+    const lines = splitSpoken(said);
+    if (!lines.length) return setHint(copy.voiceMissed);
+    setHint(null);
+    setVoiced((v) => new Set([...v, ...lines]));
+    setDump((d) => [d.trimEnd(), ...lines].filter(Boolean).join('\n'));
+  });
+  const mic = useMic(dictation, dumpInput, setHint);
+
+  const go = (next: Step) => {
+    if (dictation.listening) dictation.stop();
+    setStep(next);
+  };
   // Back steps through the metamorphoses instead of leaving the app. The lion only exists if there was a dump.
   const back = useCallback(() => {
     const prev = STEPS[STEPS.indexOf(step) - 1];
@@ -42,7 +60,7 @@ export default function Onboarding() {
       .filter(Boolean)
       .map((title) => {
         const id = newId() + Math.random().toString(36).slice(2, 5);
-        dispatch({ type: 'capture', id, title });
+        dispatch({ type: 'capture', id, title, via: voiced.has(title) ? 'voice' : undefined });
         return id;
       });
     setCaptured(ids);
@@ -76,15 +94,23 @@ export default function Onboarding() {
           <Text style={screenStyles.h1}>{o.camelTitle}</Text>
           <Text style={screenStyles.body}>{o.camelBody}</Text>
           <TextInput
-            value={dump}
+            ref={dumpInput}
+            value={dictation.listening && dictation.heard ? [dump.trimEnd(), dictation.heard].filter(Boolean).join('\n') : dump}
             onChangeText={setDump}
+            editable={!dictation.listening}
             multiline
-            autoFocus
             placeholder={o.camelPlaceholder}
             placeholderTextColor={colors.faint}
             style={st.dump}
             accessibilityLabel="Everything you're carrying, one per line"
           />
+          <Pressable accessibilityRole="button" onPress={mic} style={st.talk}>
+            <MicButton listening={dictation.listening} onPress={mic} size={40} />
+            <Text style={[st.talkText, dictation.listening && { color: colors.accent }]}>
+              {dictation.listening ? o.doneTalking : o.talk}
+            </Text>
+          </Pressable>
+          {(hint || dictation.listening) && <Text style={shared.faint}>{hint ?? copy.voiceListening}</Text>}
           <View style={shared.row}>
             <Button kind="primary" label={o.next} onPress={finishCamel} />
             <Button label={o.skip} onPress={() => go('child')} />
@@ -186,6 +212,8 @@ export default function Onboarding() {
 
 const st = StyleSheet.create({
   block: { gap: space.lg },
+  talk: { flexDirection: 'row', alignItems: 'center', gap: space.md, alignSelf: 'flex-start' },
+  talkText: { color: colors.ink, fontFamily: fonts.sans, fontSize: 16 },
   dots: { flexDirection: 'row', gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.line },
   dotOn: { backgroundColor: colors.accent },

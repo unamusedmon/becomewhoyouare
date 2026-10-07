@@ -38,6 +38,13 @@ export const copy = {
 
   capturePlaceholder: "Dump it here. Don't sort it.",
   captured: 'Captured. First step ready.',
+  voiceStart: 'Talk instead of typing',
+  voiceStop: 'Done talking',
+  voiceListening: 'Listening. Say it all, in any order.',
+  voiceTapToStop: 'Tap the mic again when you are done.',
+  voiceKeyboard: 'Tap the mic on your keyboard and talk.',
+  voiceCaught: (n: number) => (n === 1 ? 'Caught it. First step ready.' : `Caught ${n} things. Each has a first step.`),
+  voiceMissed: "Didn't catch that. Try again, or type it.",
   alsoHere: 'Also here',
   heldBack: (n: number) => `${n} heavier ${n === 1 ? 'thing is' : 'things are'} resting until you have more force.`,
 
@@ -48,6 +55,8 @@ export const copy = {
   onboarding: {
     camelTitle: "Dump everything you're carrying.",
     camelBody: "Talk or type. One thing per line. Don't sort it.",
+    talk: 'Talk',
+    doneTalking: 'Done talking',
     camelPlaceholder: 'email the landlord\ntaxes\ncall mom\nthat thing about the car',
     lionTitle: 'Most of that was handed to you.',
     lionBody: 'Which of it do you actually want?',
