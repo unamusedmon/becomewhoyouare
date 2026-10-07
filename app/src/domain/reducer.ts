@@ -8,7 +8,7 @@ import { cleanCue, settleIntention } from './intention';
 import { generateFirstStep, nextAlternative, shrinkFirstStep, validateFirstStep } from './firstStep';
 import type {
   Becoming, EnergyCost, EnergyLevel, ID, ImplementationIntention, ISODateTime, IntentionTrigger, LooseCadence,
-  OnboardingState, OvercomingSettings, RecurrenceAnswer,
+  NudgeSettings, OnboardingState, OvercomingSettings, RecurrenceAnswer,
   RecurrenceFollowUp, RecurrenceSettings, RecurrenceVerdict, Routine, Task, TaskEvent, TaskEventType, UserProfile,
 } from './model';
 import { applyAnswer, isRoutineDue, localDay, looserCadence, newRoutine } from './recurrence';
@@ -29,6 +29,7 @@ export interface AppState {
   recurrence: RecurrenceSettings;
   onboarding: OnboardingState;
   overcoming: OvercomingSettings;
+  nudges: NudgeSettings;
 }
 
 export const MAX_BECOMINGS = 3;
@@ -48,6 +49,8 @@ export const initialState: AppState = {
   recurrence: { enabled: false, maxQuestionsPerSession: 3, dismissStreak: 0, askedAboutFrequency: false },
   onboarding: {},
   overcoming: { lastShownAt: {} },
+  // Off until asked for. Six a day at most (docs/design/05, §12).
+  nudges: { enabled: false, maxPerDay: 6 },
 };
 
 /** Fills fields added after a state was saved, so older saves keep working. */
@@ -59,6 +62,7 @@ export function migrate(saved: Partial<AppState> & { version: 1 }): AppState {
     recurrence: { ...initialState.recurrence, ...saved.recurrence },
     onboarding: { ...initialState.onboarding, ...saved.onboarding },
     overcoming: { ...initialState.overcoming, ...saved.overcoming },
+    nudges: { ...initialState.nudges, ...saved.nudges },
   };
 }
 
@@ -103,7 +107,8 @@ export type Action =
   | { type: 'clear_intention'; at: ISODateTime; taskId: ID }
   /** "It's happening": the cue the person planned around just occurred. */
   | { type: 'fire_intention'; at: ISODateTime; taskId: ID }
-  | { type: 'evidence_shown'; at: ISODateTime; key: string };
+  | { type: 'evidence_shown'; at: ISODateTime; key: string }
+  | { type: 'set_nudges'; at: ISODateTime; patch: Partial<NudgeSettings> };
 
 let eventSeq = 0;
 function eventId(at: ISODateTime): ID {
@@ -346,6 +351,8 @@ export function reducer(state: AppState, action: Action): AppState {
     }
 
     case 'tick': {
+      const timed = fireTimeCues(state, at);
+      if (timed !== state) return reducer(timed, action);
       const due = state.routines.filter((r) => isRoutineDue(r, state.tasks, at));
       if (!due.length) return state;
       const spawned = due.map((r) => ({
@@ -465,6 +472,11 @@ export function reducer(state: AppState, action: Action): AppState {
         const text = cleanCue(trigger.text);
         if (!text) return state;
         trigger = { kind: 'event', text };
+      } else if (trigger.kind === 'time') {
+        const when = Date.parse(trigger.at);
+        // A time already gone isn't a plan.
+        if (Number.isNaN(when) || when <= Date.parse(at)) return state;
+        trigger = { kind: 'time', at: new Date(when).toISOString() };
       } else {
         const anchorId = trigger.taskId;
         const anchor = state.tasks.find((t) => t.id === anchorId);
@@ -502,9 +514,31 @@ export function reducer(state: AppState, action: Action): AppState {
       };
     }
 
+    case 'set_nudges': {
+      const patch = { ...action.patch };
+      if ('dailyAt' in patch && patch.dailyAt !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(patch.dailyAt)) delete patch.dailyAt;
+      return { ...state, nudges: { ...state.nudges, ...patch } };
+    }
+
     case 'evidence_shown':
       return { ...state, overcoming: { ...state.overcoming, lastShownAt: { ...state.overcoming.lastShownAt, [action.key]: at } } };
   }
+}
+
+/** Clock-time cues whose moment has come, fired in one go. Same state back when there are none. */
+function fireTimeCues(state: AppState, at: ISODateTime): AppState {
+  const now = Date.parse(at);
+  const due = state.tasks.filter(
+    (t) => (t.state === 'open' || t.state === 'started') && t.intention?.trigger.kind === 'time' &&
+      !t.intention.firedAt && Date.parse(t.intention.trigger.at) <= now,
+  );
+  if (!due.length) return state;
+  const ids = new Set(due.map((t) => t.id));
+  return {
+    ...state,
+    tasks: state.tasks.map((t) => (ids.has(t.id) ? { ...t, updatedAt: at, intention: { ...t.intention!, firedAt: at } } : t)),
+    events: [...state.events, ...due.map((t) => ({ id: eventId(at), taskId: t.id, type: 'intention_fired' as const, at }))],
+  };
 }
 
 /** Active tasks planned for "after {anchorId}" whose cue hasn't fired yet. */

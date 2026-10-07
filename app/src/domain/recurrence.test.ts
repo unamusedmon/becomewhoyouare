@@ -8,7 +8,8 @@ import {
 } from './recurrence';
 import { initialState, migrate, reducer, type Action, type AppState } from './reducer';
 
-const t0 = '2026-10-07T09:00:00.000Z';
+// 09:00 local, so "same day" means the same day wherever the tests run.
+const t0 = new Date(2026, 9, 7, 9).toISOString();
 const day = (n: number, hour = 9) => new Date(Date.parse(t0) + n * 86_400_000 + (hour - 9) * 3_600_000).toISOString();
 
 type NoAt<A> = A extends unknown ? Omit<A, 'at'> : never;

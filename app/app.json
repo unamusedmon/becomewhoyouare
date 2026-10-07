@@ -26,7 +26,14 @@
     "backgroundColor": "#0F0E0D",
     "scheme": "becomewhoyouare",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#D9A441"
+        }
+      ]
     ]
   }
 }

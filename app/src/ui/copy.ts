@@ -125,6 +125,12 @@ export const copy = {
     releasedEmpty: 'Nothing released yet. Letting go is a skill too.',
     releasedNote: "What you let go made room. It's restorable here.",
     recurrenceSetting: 'Ask the recurrence question sometimes',
+    nudgesSetting: 'Send gentle notifications',
+    nudgesNote: 'Only at times you plan, plus one daily nudge if you want it. Never more than six a day.',
+    nudgesDenied: 'Android is blocking notifications for this app. You can allow them in the system settings.',
+    dailyLabel: 'One daily nudge about something that has sat a while',
+    dailyOff: 'none',
+    dailyTimes: ['09:00', '12:00', '17:00', '20:00'],
     aphorism: { text: 'You shall become the person you are.', source: 'The Gay Science §270' },
   },
 
@@ -150,6 +156,10 @@ export const copy = {
     itsNow: "it's now",
     firedHeader: 'You planned this.',
     slipOption: 'plan a when',
+    atTime: 'or at a time',
+    timePlaceholder: '9:30pm',
+    timeHelp: 'Try something like 9:30pm or 21:30.',
+    willAsk: "I'll ask Android for permission to send one notification at that time.",
   },
 
   evidence: {
