@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import type { LooseCadence } from '../domain/model';
+import { computeEvidence } from '../domain/overcoming';
 import { affirmedShare, CADENCE_ORDER } from '../domain/recurrence';
 import { MAX_BECOMINGS } from '../domain/reducer';
 import { useApp } from '../state/AppStateContext';
@@ -23,6 +24,7 @@ export default function BecomingScreen() {
   const active = state.becomings.filter((x) => x.status === 'active');
   const routines = state.routines.filter((r) => r.status === 'active');
   const share = affirmedShare(state.routines);
+  const evidence = computeEvidence(state.tasks, state.events, new Date().toISOString());
   const anyAsked = state.routines.some((r) => r.recurrence.standing !== 'unasked');
   const released = [
     ...state.routines.filter((r) => r.status === 'released').map((r) => ({ id: r.id, title: r.title })),
@@ -77,6 +79,12 @@ export default function BecomingScreen() {
           <Text style={screenStyles.body}>{b.authored(share.affirmed, share.total)}</Text>
         </View>
       ) : null}
+
+      <View style={st.section}>
+        <Text style={shared.label}>{copy.evidence.section}</Text>
+        {evidence.length === 0 ? <Text style={shared.faint}>{copy.evidence.empty}</Text> : null}
+        {evidence.map((e) => <Text key={e.key} style={st.evidence}>{e.headline}</Text>)}
+      </View>
 
       <View style={st.section}>
         <Text style={shared.label}>{b.routines}</Text>
@@ -155,6 +163,7 @@ const st = StyleSheet.create({
   addBtn: { color: colors.accent, fontFamily: fonts.sans, fontSize: 15 },
   routine: { gap: 2, paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   routineTitle: { color: colors.ink, fontFamily: fonts.sans, fontSize: 16 },
+  evidence: { color: colors.ink, fontFamily: fonts.serif, fontSize: 17, lineHeight: 25 },
   released: { color: colors.muted, fontFamily: fonts.serif, fontSize: 15, fontStyle: 'italic' },
   setting: { paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   settingText: { flex: 1, color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },

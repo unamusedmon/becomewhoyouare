@@ -70,11 +70,13 @@ export interface Task {
   /** Set when this task is one occurrence of a routine. */
   routineId?: ID;
   becomingIds?: ID[];
+  intention?: ImplementationIntention;
 }
 
 export type TaskEventType =
   | 'created' | 'opened' | 'first_step_done' | 'completed'
-  | 'slipped' | 'shrunk' | 'released' | 'alternative_shown' | 'step_edited';
+  | 'slipped' | 'shrunk' | 'released' | 'alternative_shown' | 'step_edited'
+  | 'intention_set' | 'intention_fired';
 
 export interface TaskEvent {
   id: ID;
@@ -150,4 +152,29 @@ export interface RecurrenceSettings {
 
 export interface OnboardingState {
   completedAt?: ISODateTime;
+}
+
+// ─── Slice 4: implementation intentions, overcoming evidence ─────────────────
+
+/** WHEN. Time and place triggers wait for notifications; the design model has them. */
+export type IntentionTrigger =
+  | { kind: 'event'; text: string }     // "I finish my coffee" (habit-stacked)
+  | { kind: 'after_task'; taskId: ID }; // "after I send the invoice"
+
+/**
+ * Gollwitzer's when-where-how. HOW is always the task's current first step, so the
+ * sentence is rendered, not stored: it stays true when the step is shrunk or edited.
+ */
+export interface ImplementationIntention {
+  trigger: IntentionTrigger;
+  context?: string;                                    // WHERE: "at my desk"
+  ifObstacle?: { obstacle: string; response: string }; // MCII: "If I open Twitter, then I close it and type one bullet."
+  setAt: ISODateTime;
+  /** The cue happened. The task goes to the front until it is started or set aside. */
+  firedAt?: ISODateTime;
+}
+
+export interface OvercomingSettings {
+  /** Evidence key → when it was last shown on the Now screen. Each shows at most once a fortnight. */
+  lastShownAt: Record<string, ISODateTime>;
 }

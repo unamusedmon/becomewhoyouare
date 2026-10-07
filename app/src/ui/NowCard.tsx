@@ -1,26 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { RESHAPE_DEPTH } from '../domain/firstStep';
+import { intentionSentence, obstacleSentence } from '../domain/intention';
 import type { Becoming, Task } from '../domain/model';
 import type { Dispatch } from '../state/useAppState';
-import { Button, s as shared } from './components';
+import { Button, s as shared, useBackToClose } from './components';
 import { completionLine, copy } from './copy';
 import { clockLabel } from '../domain/duration';
+import { PlanEditor } from './PlanEditor';
 import { colors, fonts, space } from './theme';
 
 interface Props {
   task: Task;
   reason?: string;
   becomings: Becoming[];
+  /** All tasks, for "after X" plans. */
+  tasks: Task[];
   dispatch: Dispatch;
   onWin: (text: string, sub?: string) => void;
 }
 
 /** The heart of the app: one task, shown as its first physical step. */
-export function NowCard({ task, reason, becomings, dispatch, onWin }: Props) {
+export function NowCard({ task, reason, becomings, tasks, dispatch, onWin }: Props) {
   const [justStarted, setJustStarted] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [planning, setPlanning] = useState(false);
   const [draft, setDraft] = useState(task.firstStep.text);
 
   // Start latency is measured from the moment this card first shows the task.
@@ -31,11 +36,22 @@ export function NowCard({ task, reason, becomings, dispatch, onWin }: Props) {
   useEffect(() => {
     setJustStarted(false);
     setEditing(false);
+    setPlanning(false);
   }, [task.id]);
+
+  const closeEditors = useCallback(() => { setEditing(false); setPlanning(false); }, []);
+  useBackToClose(editing || planning, closeEditors);
 
   const id = task.id;
   const feeds = becomings.find((b) => b.status === 'active' && task.becomingIds?.includes(b.id));
-  const meta = [task.title, task.duration.experiential.label, feeds ? copy.feeds(feeds.statement) : reason].filter(Boolean).join(' · ');
+  const fired = !!task.intention?.firedAt;
+  const plan = task.intention && !fired ? intentionSentence(task, tasks) : undefined;
+  const stall = task.intention ? obstacleSentence(task.intention) : undefined;
+  const meta = [task.title, task.duration.experiential.label, feeds ? copy.feeds(feeds.statement) : fired ? undefined : reason].filter(Boolean).join(' · ');
+
+  if (planning) {
+    return <PlanEditor task={task} tasks={tasks} dispatch={dispatch} onDone={(saved) => { setPlanning(false); if (saved) onWin(copy.plan.saved); }} />;
+  }
 
   if (editing) {
     return (
@@ -70,6 +86,9 @@ export function NowCard({ task, reason, becomings, dispatch, onWin }: Props) {
           ) : (
             <Button kind="primary" label={copy.shrink} onPress={() => { dispatch({ type: 'keep_anyway', taskId: id }); dispatch({ type: 'shrink', taskId: id }); }} />
           )}
+          {!task.intention ? (
+            <Button label={copy.plan.slipOption} onPress={() => { dispatch({ type: 'keep_anyway', taskId: id }); setPlanning(true); }} />
+          ) : null}
           <Button label={copy.letGo} onPress={() => { dispatch({ type: 'release', taskId: id }); onWin(copy.released); }} />
           <Button label={copy.itsFine} onPress={() => dispatch({ type: 'keep_anyway', taskId: id })} />
         </View>
@@ -95,6 +114,7 @@ export function NowCard({ task, reason, becomings, dispatch, onWin }: Props) {
         <Text style={shared.label}>{copy.pickUp}</Text>
         <Text style={st.step}>{task.title}</Text>
         <Text style={shared.faint}>{task.duration.experiential.label} · {clockLabel(task.duration.plannedMinutes)}</Text>
+        {stall ? <Text style={st.stall}>{stall}</Text> : null}
         <View style={shared.row}>
           <Button kind="primary" label={copy.done} onPress={() => { dispatch({ type: 'complete', taskId: id }); onWin(copy.doneFlash, completionLine(Date.now())); }} />
           <Button label={copy.notNow} onPress={() => dispatch({ type: 'pause', taskId: id })} />
@@ -105,9 +125,11 @@ export function NowCard({ task, reason, becomings, dispatch, onWin }: Props) {
 
   return (
     <View style={st.card}>
-      <Text style={shared.label}>{copy.nowHeader}</Text>
+      <Text style={[shared.label, fired && { color: colors.accent }]}>{fired ? copy.plan.firedHeader : copy.nowHeader}</Text>
       <Text style={st.step} accessibilityRole="header">{task.firstStep.text}</Text>
       <Text style={shared.faint}>{meta}</Text>
+      {plan ? <Text style={st.stall}>{plan}</Text> : null}
+      {stall ? <Text style={st.stall}>{stall}</Text> : null}
       <View style={shared.row}>
         <Button
           kind="primary"
@@ -122,6 +144,7 @@ export function NowCard({ task, reason, becomings, dispatch, onWin }: Props) {
           <Text style={st.link} onPress={() => dispatch({ type: 'next_alternative', taskId: id })}>{copy.anotherStep}</Text>
         ) : null}
         <Text style={st.link} onPress={() => { setDraft(task.firstStep.text); setEditing(true); }}>{copy.editStep}</Text>
+        <Text style={st.link} onPress={() => setPlanning(true)}>{task.intention ? copy.plan.change : copy.plan.link}</Text>
       </View>
     </View>
   );
@@ -133,5 +156,6 @@ const st = StyleSheet.create({
   input: { borderBottomWidth: 1, borderBottomColor: colors.accent, paddingVertical: space.xs },
   title: { color: colors.ink, fontFamily: fonts.serif, fontSize: 24, lineHeight: 30 },
   body: { color: colors.ink, fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, opacity: 0.85 },
+  stall: { color: colors.muted, fontFamily: fonts.serif, fontSize: 15, lineHeight: 21, fontStyle: 'italic' },
   link: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, textDecorationLine: 'underline' },
 });

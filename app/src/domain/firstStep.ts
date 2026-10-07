@@ -46,6 +46,8 @@ export function validateFirstStep(text: string, estSeconds = 60): Validation {
 
 interface Ctx {
   obj: string;
+  /** obj without its article, for templates that supply their own: "the invoice" → "invoice". */
+  bare: string;
   /** The title itself, shortened, for steps that quote it. */
   quoted: string;
   who: string;
@@ -108,8 +110,8 @@ const LADDERS: Record<Category, (c: Ctx) => Ladder> = {
   }),
   admin: (c) => ({
     candidates: [
-      `Put the ${c.obj} paperwork on the table`,
-      `Open the ${c.obj} website on the laptop`,
+      `Put the ${c.bare} paperwork on the table`,
+      `Open the ${c.bare} website on the laptop`,
       'Find one document and put it on top of the pile',
     ],
     shrink: ['Pick up the folder', 'Look at where the paperwork is'],
@@ -151,8 +153,10 @@ const LADDERS: Record<Category, (c: Ctx) => Ladder> = {
 
 function ctxFor(title: string, profile: UserProfile): Ctx {
   const words = title.trim().split(/\s+/);
+  const obj = extractObject(title).replace(/^taxes$/i, 'tax');
   return {
-    obj: extractObject(title).replace(/^taxes$/i, 'tax'),
+    obj,
+    bare: obj.replace(/^(the|my|our|your|a|an)\s+/i, ''),
     quoted: words.length > 5 ? `${words.slice(0, 5).join(' ')}…` : words.join(' '),
     who: extractRecipient(title) ?? 'them',
     mail: profile.knownTools.mail ?? 'your email',

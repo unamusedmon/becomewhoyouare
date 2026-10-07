@@ -154,3 +154,8 @@ test('stopping after the first step is a pause, not a slip', () => {
   assert.equal(s.tasks[0].state, 'started');
   assert.equal(pickNow(s).task?.id, 't1');
 });
+
+test('admin steps never double the article: "Send the invoice" is not "the the invoice"', () => {
+  const step = generateFirstStep('Send the invoice', profile);
+  for (const text of [step.text, ...(step.alternatives ?? [])]) assert.doesNotMatch(text, /\bthe the\b/i);
+});
