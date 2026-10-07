@@ -67,6 +67,9 @@ export interface Task {
   /** True while the slip question is waiting for an answer. */
   slipPromptPending?: boolean;
   decayAfterDays: number;
+  /** Set when this task is one occurrence of a routine. */
+  routineId?: ID;
+  becomingIds?: ID[];
 }
 
 export type TaskEventType =
@@ -86,4 +89,65 @@ export interface UserProfile {
   knownTools: { mail?: string; docs?: string; calendar?: string };
   /** Starts at 1.5: generous buffers by default (planning fallacy). */
   estimateCalibration: Record<EnergyCost, number>;
+}
+
+// ─── Slice 2: becoming, routines, eternal recurrence ─────────────────────────
+
+/** An identity-in-progress, not a goal: "someone who writes every week". Up to 3 at a time. */
+export interface Becoming {
+  id: ID;
+  createdAt: ISODateTime;
+  statement: string;
+  status: 'active' | 'resting' | 'outgrown';
+}
+
+export type LooseCadence = 'daily' | 'few_per_week' | 'weekly' | 'monthly';
+
+export type RecurrenceStanding = 'affirmed' | 'questioned' | 'reshaping' | 'unasked';
+
+export interface Routine {
+  id: ID;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+  title: string;
+  cadence: LooseCadence;
+  /** Tolls (taxes, school pickup) get "how can this weigh less?" instead of "should this exist?". */
+  nature: 'chosen' | 'toll' | 'unknown';
+  becomingIds: ID[];
+  lastDoneAt?: ISODateTime;
+  status: 'active' | 'paused' | 'released';
+  recurrence: {
+    lastAskedAt?: ISODateTime;
+    nextEligibleAt: ISODateTime;
+    consecutiveYes: number;
+    standing: RecurrenceStanding;
+    lastLinkPromptAt?: ISODateTime;
+  };
+}
+
+export type RecurrenceAnswer = 'yes' | 'no' | 'unsure' | 'skipped';
+export type RecurrenceFollowUp =
+  | 'reshape' | 'make_rarer' | 'mark_toll_and_lighten' | 'release' | 'keep_anyway' | 'later';
+
+export interface RecurrenceVerdict {
+  id: ID;
+  routineId: ID;
+  askedAt: ISODateTime;
+  answer: RecurrenceAnswer;
+  followUp?: RecurrenceFollowUp;
+  energyNow?: EnergyLevel;
+}
+
+export interface RecurrenceSettings {
+  enabled: boolean;
+  maxQuestionsPerSession: number;
+  /** Local date ("2026-10-07") of the last session, so it runs at most once a day. */
+  lastSessionDay?: string;
+  /** Sessions dismissed in a row. At 3 the app asks once whether to ask less. */
+  dismissStreak: number;
+  askedAboutFrequency: boolean;
+}
+
+export interface OnboardingState {
+  completedAt?: ISODateTime;
 }

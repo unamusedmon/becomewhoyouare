@@ -24,10 +24,14 @@ npm run typecheck
 | All state changes, incl. start-latency logging | `src/domain/reducer.ts` | `01` (TaskEvent, TaskStats) |
 | Copy | `src/ui/copy.ts` | `04-copy-tone-guide.md` |
 
+Slice 2 adds onboarding (`src/app/onboarding.tsx`), becomings, routines and the eternal
+recurrence question (`src/domain/recurrence.ts`, `src/ui/RecurrenceCard.tsx`, design doc `03`),
+and the Becoming screen (`src/app/becoming.tsx`). Screens use Expo Router under `src/app/`.
+
 Everything is stored on the device (AsyncStorage). Nothing leaves the phone yet.
 
 ## Not yet
 
 Model-generated first steps (needs a small server so no API key ships in the app),
-implementation intentions, the recurrence question, notifications, voice capture
+implementation intentions, notifications, voice capture
 beyond the keyboard's dictation, natural-language search, overcoming evidence.
