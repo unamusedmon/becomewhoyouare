@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, BackHandler, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { EnergyLevel, Task } from '../domain/model';
 import { copy } from './copy';
@@ -11,11 +11,24 @@ export function Button({ label, onPress, kind = 'quiet' }: { label: string; onPr
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [kind === 'primary' ? s.primary : s.quiet, pressed && { opacity: 0.7 }]}
+      android_ripple={{ color: kind === 'primary' ? '#B8862E' : colors.line }}
+      style={({ pressed }) => [kind === 'primary' ? s.primary : s.quiet, pressed && Platform.OS !== 'android' && { opacity: 0.7 }]}
     >
       <Text style={kind === 'primary' ? s.primaryText : s.quietText}>{label}</Text>
     </Pressable>
   );
+}
+
+/** Android's back button closes whatever is open (an editor, a step) before it leaves the screen. */
+export function useBackToClose(active: boolean, close: () => void) {
+  useEffect(() => {
+    if (!active || Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      close();
+      return true;
+    });
+    return () => sub.remove();
+  }, [active, close]);
 }
 
 const LEVELS: EnergyLevel[] = ['high', 'medium', 'low', 'fried'];
@@ -136,9 +149,9 @@ export const s = StyleSheet.create({
   chipOn: { borderColor: colors.accent, backgroundColor: '#2A2214' },
   chipText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
   chipTextOn: { color: colors.accent },
-  primary: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 22, paddingVertical: 13 },
+  primary: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 22, paddingVertical: 13, overflow: 'hidden' },
   primaryText: { color: '#17130A', fontFamily: fonts.sans, fontSize: 16, fontWeight: '600' },
-  quiet: { paddingHorizontal: 10, paddingVertical: 13 },
+  quiet: { paddingHorizontal: 10, paddingVertical: 13, borderRadius: 10, overflow: 'hidden' },
   quietText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 15 },
   captureRow: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
   captureInput: {

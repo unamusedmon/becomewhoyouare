@@ -128,6 +128,37 @@ export const copy = {
     aphorism: { text: 'You shall become the person you are.', source: 'The Gay Science §270' },
   },
 
+  plan: {
+    link: 'plan when',
+    change: 'change plan',
+    title: 'When will you do it?',
+    body: 'Tie it to something that already happens. A plan with a when and a where gets done far more often than a good intention.',
+    when: 'When…',
+    whenPlaceholder: 'I finish my coffee',
+    after: 'or right after',
+    where: 'Where (optional)',
+    wherePlaceholder: 'at my desk',
+    stall: 'plan for a stall',
+    ifLabel: 'If I…',
+    ifPlaceholder: 'pick up my phone instead',
+    thenLabel: "then I'll…",
+    thenPlaceholder: 'put it face down and do the first step',
+    save: 'set the plan',
+    remove: 'remove plan',
+    saved: 'Planned. Go live until then.',
+    waiting: 'Waiting for their moment',
+    itsNow: "it's now",
+    firedHeader: 'You planned this.',
+    slipOption: 'plan a when',
+  },
+
+  evidence: {
+    title: 'Look at you now.',
+    noted: 'noted',
+    section: 'Evidence',
+    empty: "Proof that you're getting faster shows up here once there's enough of it to be true. Nothing here is made up.",
+  },
+
   emptyNow: "Nothing here. Either you're done, or you're about to capture something. Both are good.",
   aphorism: {
     text: 'One must still have chaos in oneself to be able to give birth to a dancing star.',

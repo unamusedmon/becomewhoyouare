@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useApp } from '../state/AppStateContext';
 import { newId } from '../state/useAppState';
-import { Button, s as shared } from '../ui/components';
+import { Button, s as shared, useBackToClose } from '../ui/components';
 import { copy } from '../ui/copy';
 import { Screen, screenStyles } from '../ui/Screen';
 import { colors, fonts, space } from '../ui/theme';
@@ -28,6 +28,12 @@ export default function Onboarding() {
   const [becoming, setBecoming] = useState('');
 
   const go = (next: Step) => setStep(next);
+  // Back steps through the metamorphoses instead of leaving the app. The lion only exists if there was a dump.
+  const back = useCallback(() => {
+    const prev = STEPS[STEPS.indexOf(step) - 1];
+    setStep(prev === 'lion' && !captured.length ? 'camel' : prev);
+  }, [step, captured.length]);
+  useBackToClose(step !== 'camel', back);
 
   const finishCamel = () => {
     const ids = dump

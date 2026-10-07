@@ -1,15 +1,21 @@
 import { Link } from 'expo-router';
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, fonts, space } from './theme';
 
 /** Shared page frame: dark, one column, readable width on web. */
 export function Screen({ children, nav }: { children: ReactNode; nav?: { href: '/' | '/becoming'; label: string } }) {
+  // Android draws edge to edge (SDK 54+), so the status bar, gesture bar and keyboard are ours to avoid.
+  const insets = useSafeAreaInsets();
   return (
     <View style={st.root}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={st.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+        <ScrollView
+          contentContainerStyle={[st.scroll, { paddingTop: insets.top + space.lg, paddingBottom: insets.bottom + space.xl }]}
+          keyboardShouldPersistTaps="handled"
+        >
           {nav ? (
             <View style={st.top}>
               <Text style={st.brand}>Become Who You Are</Text>
@@ -32,7 +38,7 @@ export const screenStyles = StyleSheet.create({
 
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: space.md, paddingTop: space.xl + space.md, paddingBottom: space.xl, gap: space.lg, maxWidth: 640, width: '100%', alignSelf: 'center' },
+  scroll: { padding: space.md, gap: space.lg, maxWidth: 640, width: '100%', alignSelf: 'center' },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   brand: { color: colors.faint, fontFamily: fonts.serif, fontSize: 15, letterSpacing: 1, fontStyle: 'italic' },
   nav: { color: colors.accent, fontFamily: fonts.sans, fontSize: 15 },

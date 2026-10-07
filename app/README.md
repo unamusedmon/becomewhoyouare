@@ -8,7 +8,7 @@ capture a task, see it as its smallest first step on the Now card, tap **I did i
 ```bash
 cd app
 npm install
-npx expo start        # scan the QR code with Expo Go, or press w for web
+npx expo start        # scan the QR code with Expo Go on Android, or press a for an emulator
 npm test              # domain tests (node:test via tsx)
 npm run typecheck
 ```
@@ -28,10 +28,16 @@ Slice 2 adds onboarding (`src/app/onboarding.tsx`), becomings, routines and the 
 recurrence question (`src/domain/recurrence.ts`, `src/ui/RecurrenceCard.tsx`, design doc `03`),
 and the Becoming screen (`src/app/becoming.tsx`). Screens use Expo Router under `src/app/`.
 
+Slice 4 adds implementation intentions ("when I finish my coffee, at my desk, I'll…", with an
+optional if-then for stalls) in `src/domain/intention.ts` and `src/ui/PlanEditor.tsx`, and
+overcoming evidence computed from real start times in `src/domain/overcoming.ts` (silent until
+the sample is big enough and the change is real). Android is the primary target: verify with
+`npx expo export --platform android`.
+
 Everything is stored on the device (AsyncStorage). Nothing leaves the phone yet.
 
 ## Not yet
 
 Model-generated first steps (needs a small server so no API key ships in the app),
-implementation intentions, notifications, voice capture
-beyond the keyboard's dictation, natural-language search, overcoming evidence.
+notifications (clock and place cues for intentions need them), voice capture beyond the
+keyboard's dictation, natural-language search.

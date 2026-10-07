@@ -3,7 +3,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { Routine } from '../domain/model';
-import { pickNow, rankTasks } from '../domain/planner';
+import { isWaitingOnCue } from '../domain/intention';
+import { computeEvidence, evidenceToShow, type Evidence } from '../domain/overcoming';
+import { isActive, pickNow, rankTasks } from '../domain/planner';
 import { DISMISSALS_BEFORE_ASKING, selectQuestions, shouldOfferSession } from '../domain/recurrence';
 import { useApp } from '../state/AppStateContext';
 import { newId } from '../state/useAppState';
@@ -13,12 +15,15 @@ import { NowCard } from '../ui/NowCard';
 import { FrequencyCard, RecurrenceCard } from '../ui/RecurrenceCard';
 import { Screen, screenStyles } from '../ui/Screen';
 import { colors, fonts } from '../ui/theme';
+import { EvidenceCard, WaitingForCue } from '../ui/Waiting';
 
 export default function NowScreen() {
   const { state, hydrated, dispatch } = useApp();
   const [flash, setFlash] = useState<Flash | null>(null);
   const [aphorismHidden, setAphorismHidden] = useState(false);
   const [session, setSession] = useState<Routine[] | null>(null);
+  // undefined: not checked yet this visit; null: nothing to show.
+  const [evidence, setEvidence] = useState<Evidence | null | undefined>(undefined);
 
   const onWin = useCallback((text: string, sub?: string) => setFlash({ key: Date.now(), text, sub }), []);
 
@@ -32,11 +37,21 @@ export default function NowScreen() {
     }
   }, [hydrated, state, session, dispatch]);
 
+  // Evidence is checked once per visit, and marked shown the moment it appears.
+  useEffect(() => {
+    if (!hydrated || evidence !== undefined || !state.onboarding.completedAt) return;
+    const at = new Date().toISOString();
+    const found = evidenceToShow(computeEvidence(state.tasks, state.events, at), state.overcoming.lastShownAt, at) ?? null;
+    setEvidence(found);
+    if (found) dispatch({ type: 'evidence_shown', key: found.key });
+  }, [hydrated, state, evidence, dispatch]);
+
   if (hydrated && !state.onboarding.completedAt) return <Redirect href="/onboarding" />;
 
   const now = pickNow(state);
   // Only what fits current energy; the rest is summarized by the "resting" line.
-  const others = rankTasks(state.tasks, state.energy).filter((t) => t.id !== now.task?.id);
+  const others = rankTasks(state.tasks, state.energy).filter((t) => t.id !== now.task?.id && !isWaitingOnCue(t));
+  const waiting = state.tasks.filter((t) => isActive(t) && isWaitingOnCue(t) && t.id !== now.task?.id);
   const becoming = state.becomings.find((b) => b.status === 'active');
   const askFrequency =
     state.recurrence.enabled && !state.recurrence.askedAboutFrequency && state.recurrence.dismissStreak >= DISMISSALS_BEFORE_ASKING;
@@ -50,12 +65,13 @@ export default function NowScreen() {
         {state.energy === 'fried' ? <Text style={{ color: colors.accent, fontFamily: fonts.sans, fontSize: 14 }}>{copy.friedNote}</Text> : null}
 
         {askFrequency ? <FrequencyCard dispatch={dispatch} /> : null}
+        {evidence ? <EvidenceCard evidence={evidence} onNoted={() => setEvidence(null)} /> : null}
         {session?.length ? (
           <RecurrenceCard queue={session} state={state} dispatch={dispatch} onWin={onWin} onClose={() => setSession([])} />
         ) : null}
 
         {!hydrated ? null : now.task ? (
-          <NowCard task={now.task} reason={now.reason} becomings={state.becomings} dispatch={dispatch} onWin={onWin} />
+          <NowCard task={now.task} reason={now.reason} becomings={state.becomings} tasks={state.tasks} dispatch={dispatch} onWin={onWin} />
         ) : (
           <View style={{ paddingVertical: 24, gap: 24 }}>
             <Text style={screenStyles.h2}>{copy.emptyNow}</Text>
@@ -69,6 +85,8 @@ export default function NowScreen() {
         )}
 
         {now.heldBack > 0 ? <Text style={shared.faint}>{copy.heldBack(now.heldBack)}</Text> : null}
+
+        <WaitingForCue tasks={waiting} all={state.tasks} onFire={(taskId) => dispatch({ type: 'fire_intention', taskId })} />
 
         <CaptureBar onCapture={(title) => dispatch({ type: 'capture', id: newId(), title })} />
 

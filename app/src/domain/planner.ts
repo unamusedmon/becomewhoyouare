@@ -2,6 +2,7 @@
  * Picks the one task for the Now card. Energy fit first, deadline-free for now
  * (deadlines arrive with the next slice). See DayAllocation in the design model.
  */
+import { isWaitingOnCue } from './intention';
 import type { EnergyCost, EnergyLevel, Task } from './model';
 import type { AppState } from './reducer';
 
@@ -28,6 +29,8 @@ export function rankTasks(tasks: Task[], energy: EnergyLevel | undefined): Task[
     .filter((t) => fitRank(t, energy) !== undefined)
     .sort((a, b) =>
       (fitRank(a, energy)! - fitRank(b, energy)!) ||
+      // Planned for a cue that hasn't happened: it waits for its moment.
+      (Number(isWaitingOnCue(a)) - Number(isWaitingOnCue(b))) ||
       // Recently deferred goes to the back; never-deferred first.
       ((a.lastDeferredAt ? Date.parse(a.lastDeferredAt) : 0) - (b.lastDeferredAt ? Date.parse(b.lastDeferredAt) : 0)) ||
       // Momentum: something already started beats something new.
@@ -46,12 +49,17 @@ export interface NowPick {
 export function pickNow(state: AppState): NowPick {
   const active = state.tasks.filter(isActive);
   const ranked = rankTasks(state.tasks, state.energy);
-  const heldBack = active.length - ranked.length;
   const pinned = state.pinnedNowId ? active.find((t) => t.id === state.pinnedNowId) : undefined;
-  const task = pinned ?? ranked[0];
+  // A cue the person planned for just happened. That beats energy fit: they chose this moment.
+  const fired = active
+    .filter((t) => t.intention?.firedAt)
+    .sort((a, b) => Date.parse(b.intention!.firedAt!) - Date.parse(a.intention!.firedAt!))[0];
+  const task = pinned ?? fired ?? ranked[0];
+  const heldBack = active.filter((t) => t !== task && !ranked.includes(t)).length;
   if (!task) return { heldBack };
   let reason: string | undefined;
   if (pinned) reason = 'your pick';
+  else if (task === fired) reason = 'you planned this';
   else if (state.energy && fitRank(task, state.energy) === 0) reason = 'fits your energy';
   else if (task.state === 'started') reason = 'already started';
   return { task, reason, heldBack };

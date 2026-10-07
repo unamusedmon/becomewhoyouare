@@ -4,9 +4,11 @@
  */
 import { inferEnergy, categorize } from './classify';
 import { defaultRawMinutes, estimateDuration } from './duration';
+import { cleanCue, settleIntention } from './intention';
 import { generateFirstStep, nextAlternative, shrinkFirstStep, validateFirstStep } from './firstStep';
 import type {
-  Becoming, EnergyCost, EnergyLevel, ID, ISODateTime, LooseCadence, OnboardingState, RecurrenceAnswer,
+  Becoming, EnergyCost, EnergyLevel, ID, ImplementationIntention, ISODateTime, IntentionTrigger, LooseCadence,
+  OnboardingState, OvercomingSettings, RecurrenceAnswer,
   RecurrenceFollowUp, RecurrenceSettings, RecurrenceVerdict, Routine, Task, TaskEvent, TaskEventType, UserProfile,
 } from './model';
 import { applyAnswer, isRoutineDue, localDay, looserCadence, newRoutine } from './recurrence';
@@ -26,6 +28,7 @@ export interface AppState {
   verdicts: RecurrenceVerdict[];
   recurrence: RecurrenceSettings;
   onboarding: OnboardingState;
+  overcoming: OvercomingSettings;
 }
 
 export const MAX_BECOMINGS = 3;
@@ -44,6 +47,7 @@ export const initialState: AppState = {
   // Off until the person opts in. Never a daily ritual by default.
   recurrence: { enabled: false, maxQuestionsPerSession: 3, dismissStreak: 0, askedAboutFrequency: false },
   onboarding: {},
+  overcoming: { lastShownAt: {} },
 };
 
 /** Fills fields added after a state was saved, so older saves keep working. */
@@ -54,6 +58,7 @@ export function migrate(saved: Partial<AppState> & { version: 1 }): AppState {
     profile: { ...initialState.profile, ...saved.profile },
     recurrence: { ...initialState.recurrence, ...saved.recurrence },
     onboarding: { ...initialState.onboarding, ...saved.onboarding },
+    overcoming: { ...initialState.overcoming, ...saved.overcoming },
   };
 }
 
@@ -90,7 +95,15 @@ export type Action =
   | { type: 'follow_up_recurrence'; at: ISODateTime; routineId: ID; followUp: RecurrenceFollowUp }
   | { type: 'reshape_routine'; at: ISODateTime; routineId: ID; title: string }
   /** becomingId null = "skip"; it still records that we asked. */
-  | { type: 'link_routine_becoming'; at: ISODateTime; routineId: ID; becomingId: ID | null };
+  | { type: 'link_routine_becoming'; at: ISODateTime; routineId: ID; becomingId: ID | null }
+  | {
+      type: 'set_intention'; at: ISODateTime; taskId: ID; trigger: IntentionTrigger;
+      context?: string; ifObstacle?: { obstacle: string; response: string };
+    }
+  | { type: 'clear_intention'; at: ISODateTime; taskId: ID }
+  /** "It's happening": the cue the person planned around just occurred. */
+  | { type: 'fire_intention'; at: ISODateTime; taskId: ID }
+  | { type: 'evidence_shown'; at: ISODateTime; key: string };
 
 let eventSeq = 0;
 function eventId(at: ISODateTime): ID {
@@ -162,7 +175,7 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         tasks: updateTask(state, task.id, at, (t) => ({
-          ...t,
+          ...settleIntention(t),
           state: 'started',
           openedAt: undefined,
           firstStep: { ...t.firstStep, doneAt: at },
@@ -185,8 +198,15 @@ export function reducer(state: AppState, action: Action): AppState {
           ? updateRoutine(state, task.routineId, at, (r) => ({ ...r, lastDoneAt: at }))
           : state.routines,
         pinnedNowId: state.pinnedNowId === action.taskId ? undefined : state.pinnedNowId,
-        tasks: updateTask(state, action.taskId, at, (t) => ({ ...t, state: 'done', openedAt: undefined })),
-        events: logEvent(state, action.taskId, 'completed', at),
+        tasks: fireAfter(
+          updateTask(state, action.taskId, at, (t) => ({ ...settleIntention(t), state: 'done', openedAt: undefined })),
+          action.taskId,
+          at,
+        ),
+        events: [
+          ...logEvent(state, action.taskId, 'completed', at),
+          ...waitingAfter(state.tasks, action.taskId).map((t) => ({ id: eventId(at), taskId: t.id, type: 'intention_fired' as const, at })),
+        ],
       };
     }
 
@@ -198,7 +218,7 @@ export function reducer(state: AppState, action: Action): AppState {
         ...state,
         pinnedNowId: state.pinnedNowId === task.id ? undefined : state.pinnedNowId,
         tasks: updateTask(state, task.id, at, (t) => ({
-          ...t,
+          ...settleIntention(t),
           openedAt: undefined,
           lastDeferredAt: at,
           slipPromptPending: slipped >= SLIP_PROMPT_AFTER && slipped % SLIP_PROMPT_AFTER === 0,
@@ -213,7 +233,7 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         pinnedNowId: state.pinnedNowId === action.taskId ? undefined : state.pinnedNowId,
-        tasks: updateTask(state, action.taskId, at, (t) => ({ ...t, openedAt: undefined, lastDeferredAt: at })),
+        tasks: updateTask(state, action.taskId, at, (t) => ({ ...settleIntention(t), openedAt: undefined, lastDeferredAt: at })),
       };
     }
 
@@ -263,7 +283,10 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         pinnedNowId: state.pinnedNowId === action.taskId ? undefined : state.pinnedNowId,
-        tasks: updateTask(state, action.taskId, at, (t) => ({ ...t, state: 'released', openedAt: undefined, slipPromptPending: false })),
+        tasks: dropAfter(
+          updateTask(state, action.taskId, at, (t) => ({ ...settleIntention(t), state: 'released', openedAt: undefined, slipPromptPending: false })),
+          action.taskId,
+        ),
         events: logEvent(state, action.taskId, 'released', at),
       };
     }
@@ -282,7 +305,10 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         pinnedNowId: state.pinnedNowId === action.taskId ? undefined : state.pinnedNowId,
-        tasks: updateTask(state, action.taskId, at, (t) => ({ ...t, state: 'resting', openedAt: undefined })),
+        tasks: dropAfter(
+          updateTask(state, action.taskId, at, (t) => ({ ...settleIntention(t), state: 'resting', openedAt: undefined })),
+          action.taskId,
+        ),
       };
 
     case 'complete_onboarding':
@@ -430,5 +456,72 @@ export function reducer(state: AppState, action: Action): AppState {
               t.routineId === action.routineId ? { ...t, becomingIds: [...new Set([...(t.becomingIds ?? []), action.becomingId!])] } : t)
           : state.tasks,
       };
+
+    case 'set_intention': {
+      const task = state.tasks.find((t) => t.id === action.taskId);
+      if (!task || !(task.state === 'open' || task.state === 'started')) return state;
+      let trigger = action.trigger;
+      if (trigger.kind === 'event') {
+        const text = cleanCue(trigger.text);
+        if (!text) return state;
+        trigger = { kind: 'event', text };
+      } else {
+        const anchorId = trigger.taskId;
+        const anchor = state.tasks.find((t) => t.id === anchorId);
+        if (!anchor || anchor.id === task.id || !(anchor.state === 'open' || anchor.state === 'started')) return state;
+      }
+      const context = action.context?.trim() || undefined;
+      const obstacle = action.ifObstacle?.obstacle.trim();
+      const response = action.ifObstacle?.response.trim();
+      const intention: ImplementationIntention = {
+        trigger,
+        context,
+        ifObstacle: obstacle && response ? { obstacle, response } : undefined,
+        setAt: at,
+      };
+      return {
+        ...state,
+        // A plan for later means "not on the Now card yet".
+        pinnedNowId: state.pinnedNowId === task.id ? undefined : state.pinnedNowId,
+        tasks: updateTask(state, task.id, at, (t) => ({ ...t, intention, openedAt: undefined })),
+        events: logEvent(state, task.id, 'intention_set', at, { trigger: trigger.kind, where: !!context, obstacle: !!intention.ifObstacle }),
+      };
+    }
+
+    case 'clear_intention':
+      if (!state.tasks.some((t) => t.id === action.taskId && t.intention)) return state;
+      return { ...state, tasks: updateTask(state, action.taskId, at, (t) => ({ ...t, intention: undefined })) };
+
+    case 'fire_intention': {
+      const task = state.tasks.find((t) => t.id === action.taskId);
+      if (!task?.intention || task.intention.firedAt) return state;
+      return {
+        ...state,
+        tasks: updateTask(state, task.id, at, (t) => ({ ...t, intention: { ...t.intention!, firedAt: at } })),
+        events: logEvent(state, task.id, 'intention_fired', at),
+      };
+    }
+
+    case 'evidence_shown':
+      return { ...state, overcoming: { ...state.overcoming, lastShownAt: { ...state.overcoming.lastShownAt, [action.key]: at } } };
   }
+}
+
+/** Active tasks planned for "after {anchorId}" whose cue hasn't fired yet. */
+function waitingAfter(tasks: Task[], anchorId: ID): Task[] {
+  return tasks.filter(
+    (t) => (t.state === 'open' || t.state === 'started') &&
+      t.intention?.trigger.kind === 'after_task' && t.intention.trigger.taskId === anchorId && !t.intention.firedAt,
+  );
+}
+
+function fireAfter(tasks: Task[], anchorId: ID, at: ISODateTime): Task[] {
+  const ids = new Set(waitingAfter(tasks, anchorId).map((t) => t.id));
+  return tasks.map((t) => (ids.has(t.id) ? { ...t, updatedAt: at, intention: { ...t.intention!, firedAt: at } } : t));
+}
+
+/** The anchor went away without being done, so "after it" means nothing now. The task stays; the plan goes. */
+function dropAfter(tasks: Task[], anchorId: ID): Task[] {
+  return tasks.map((t) =>
+    t.intention?.trigger.kind === 'after_task' && t.intention.trigger.taskId === anchorId ? { ...t, intention: undefined } : t);
 }
