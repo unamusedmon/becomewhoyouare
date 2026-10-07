@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { RESHAPE_DEPTH } from '../domain/firstStep';
-import type { Task } from '../domain/model';
+import type { Becoming, Task } from '../domain/model';
 import type { Dispatch } from '../state/useAppState';
 import { Button, s as shared } from './components';
 import { completionLine, copy } from './copy';
@@ -12,12 +12,13 @@ import { colors, fonts, space } from './theme';
 interface Props {
   task: Task;
   reason?: string;
+  becomings: Becoming[];
   dispatch: Dispatch;
   onWin: (text: string, sub?: string) => void;
 }
 
 /** The heart of the app: one task, shown as its first physical step. */
-export function NowCard({ task, reason, dispatch, onWin }: Props) {
+export function NowCard({ task, reason, becomings, dispatch, onWin }: Props) {
   const [justStarted, setJustStarted] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.firstStep.text);
@@ -33,7 +34,8 @@ export function NowCard({ task, reason, dispatch, onWin }: Props) {
   }, [task.id]);
 
   const id = task.id;
-  const meta = [task.title, task.duration.experiential.label, reason].filter(Boolean).join(' · ');
+  const feeds = becomings.find((b) => b.status === 'active' && task.becomingIds?.includes(b.id));
+  const meta = [task.title, task.duration.experiential.label, feeds ? copy.feeds(feeds.statement) : reason].filter(Boolean).join(' · ');
 
   if (editing) {
     return (

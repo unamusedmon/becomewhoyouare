@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 
-import { initialState, reducer, type Action, type AppState } from '../domain/reducer';
+import { initialState, migrate, reducer, type Action, type AppState } from '../domain/reducer';
 
 const STORAGE_KEY = 'bwya/state/v1';
 
@@ -30,7 +30,7 @@ export function useAppState(): { state: AppState; hydrated: boolean; dispatch: D
     AsyncStorage.getItem(STORAGE_KEY)
       .then((json) => {
         const parsed = json ? (JSON.parse(json) as AppState) : null;
-        if (!cancelled) rawDispatch({ type: 'hydrate', state: parsed?.version === 1 ? parsed : null });
+        if (!cancelled) rawDispatch({ type: 'hydrate', state: parsed?.version === 1 ? migrate(parsed) : null });
       })
       .catch(() => !cancelled && rawDispatch({ type: 'hydrate', state: null }));
     return () => {
