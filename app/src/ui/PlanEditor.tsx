@@ -13,6 +13,9 @@ import { colors, fonts, space } from './theme';
 
 const p = copy.plan;
 
+type Mode = 'event' | 'after' | 'time';
+const MODES: Mode[] = ['event', 'after', 'time'];
+
 /** "When X, where Y, I'll do the first step. If I stall, then Z." Nothing in it is required but the when. */
 export function PlanEditor({ task, tasks, dispatch, onDone }: { task: Task; tasks: Task[]; dispatch: Dispatch; onDone: (saved: boolean) => void }) {
   const i = task.intention;
@@ -22,21 +25,20 @@ export function PlanEditor({ task, tasks, dispatch, onDone }: { task: Task; task
   const [timeText, setTimeText] = useState('');
   const { state } = useApp();
   const [presets] = useState(() => timePresets());
-  // Picking one kind of "when" clears the others: a plan has exactly one cue.
-  const chooseCue = (text: string) => { setCue(text); setAfterId(undefined); setTimeAt(undefined); setTimeText(''); };
-  const chooseAfter = (id: string | undefined) => { setAfterId(id); setTimeAt(undefined); setTimeText(''); };
-  const chooseTime = (d: Date | undefined) => { setTimeAt(d); setAfterId(undefined); setCue(''); };
+  // One kind of "when" at a time, so the editor shows a handful of controls instead of all of them.
+  const [mode, setMode] = useState<Mode>(i?.trigger.kind === 'after_task' ? 'after' : i?.trigger.kind === 'time' ? 'time' : 'event');
   const [where, setWhere] = useState(i?.context ?? '');
   const [stall, setStall] = useState(!!i?.ifObstacle);
+  const [extras, setExtras] = useState(!!i?.context || !!i?.ifObstacle);
   const [obstacle, setObstacle] = useState(i?.ifObstacle?.obstacle ?? '');
   const [response, setResponse] = useState(i?.ifObstacle?.response ?? '');
 
   const anchors = tasks.filter((t) => isActive(t) && t.id !== task.id).slice(0, 4);
-  const trigger: IntentionTrigger | undefined = timeAt
-    ? { kind: 'time', at: timeAt.toISOString() }
-    : afterId
-      ? { kind: 'after_task', taskId: afterId }
-      : cleanCue(cue) ? { kind: 'event', text: cleanCue(cue) } : undefined;
+  const trigger: IntentionTrigger | undefined =
+    mode === 'time' ? (timeAt ? { kind: 'time', at: timeAt.toISOString() } : undefined)
+      : mode === 'after' ? (afterId ? { kind: 'after_task', taskId: afterId } : undefined)
+        : cleanCue(cue) ? { kind: 'event', text: cleanCue(cue) } : undefined;
+  const modes = MODES.filter((m) => m !== 'after' || anchors.length);
   const preview = trigger
     ? intentionSentence({ ...task, intention: { trigger, context: where, setAt: '' } }, tasks)
     : undefined;
@@ -64,81 +66,107 @@ export function PlanEditor({ task, tasks, dispatch, onDone }: { task: Task; task
       <Text style={st.body}>{p.body}</Text>
       <Text style={shared.faint}>{task.title}</Text>
 
-      <View style={st.field}>
-        <Text style={shared.label}>{p.when}</Text>
-        <TextInput
-          value={cue}
-          onChangeText={chooseCue}
-          placeholder={p.whenPlaceholder}
-          placeholderTextColor={colors.faint}
-          style={st.input}
-          accessibilityLabel="When"
-        />
-        <View style={shared.row}>
-          {CUE_SUGGESTIONS.map((c) => (
-            <Chip key={c} label={c} on={!afterId && !timeAt && cue === c} onPress={() => chooseCue(c)} />
-          ))}
-        </View>
+      <View style={st.tabs} accessibilityRole="tablist">
+        {modes.map((m) => (
+          <Pressable
+            key={m}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === m }}
+            onPress={() => setMode(m)}
+            style={[st.tab, mode === m && st.tabOn]}
+          >
+            <Text style={[st.tabText, mode === m && st.tabTextOn]}>{p.modes[m]}</Text>
+          </Pressable>
+        ))}
       </View>
 
-      {anchors.length ? (
+      {mode === 'event' && (
+        <View style={st.field}>
+          <Text style={shared.label}>{p.when}</Text>
+          <TextInput
+            value={cue}
+            onChangeText={setCue}
+            placeholder={p.whenPlaceholder}
+            placeholderTextColor={colors.faint}
+            style={st.input}
+            accessibilityLabel="When"
+          />
+          <View style={shared.row}>
+            {CUE_SUGGESTIONS.map((c) => (
+              <Chip key={c} label={c} on={cue === c} onPress={() => setCue(c)} />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {mode === 'after' && (
         <View style={st.field}>
           <Text style={shared.label}>{p.after}</Text>
           <View style={shared.row}>
             {anchors.map((t) => (
-              <Chip key={t.id} label={t.title} on={afterId === t.id} onPress={() => chooseAfter(afterId === t.id ? undefined : t.id)} />
+              <Chip key={t.id} label={t.title} on={afterId === t.id} onPress={() => setAfterId(afterId === t.id ? undefined : t.id)} />
             ))}
           </View>
         </View>
+      )}
+
+      {mode === 'time' && (
+        <View style={st.field}>
+          <Text style={shared.label}>{p.atTime}</Text>
+          <View style={shared.row}>
+            {presets.map((x) => (
+              <Chip
+                key={x.label}
+                label={x.label}
+                on={!!timeAt && !timeText && timeAt.getTime() === x.at.getTime()}
+                onPress={() => { setTimeText(''); setTimeAt(x.at); }}
+              />
+            ))}
+          </View>
+          <TextInput
+            value={timeText}
+            onChangeText={(t) => { setTimeText(t); setTimeAt(parseClock(t)); }}
+            placeholder={p.timePlaceholder}
+            placeholderTextColor={colors.faint}
+            style={st.input}
+            keyboardType={Platform.OS === 'android' ? 'default' : 'numbers-and-punctuation'}
+            autoCapitalize="none"
+            accessibilityLabel="At a time"
+          />
+          {timeText && !timeAt ? <Text style={shared.faint}>{p.timeHelp}</Text> : null}
+        </View>
+      )}
+
+      {/* Extras only once there's a when to hang them on. */}
+      {trigger && (where || extras) ? (
+        <View style={st.field}>
+          <Text style={shared.label}>{p.where}</Text>
+          <TextInput
+            value={where}
+            onChangeText={setWhere}
+            placeholder={p.wherePlaceholder}
+            placeholderTextColor={colors.faint}
+            style={st.input}
+            accessibilityLabel="Where"
+          />
+        </View>
       ) : null}
 
-      <View style={st.field}>
-        <Text style={shared.label}>{p.atTime}</Text>
-        <View style={shared.row}>
-          {presets.map((x) => (
-            <Chip
-              key={x.label}
-              label={x.label}
-              on={!!timeAt && !timeText && timeAt.getTime() === x.at.getTime()}
-              onPress={() => { setTimeText(''); chooseTime(x.at); }}
-            />
-          ))}
-        </View>
-        <TextInput
-          value={timeText}
-          onChangeText={(t) => { setTimeText(t); chooseTime(parseClock(t)); }}
-          placeholder={p.timePlaceholder}
-          placeholderTextColor={colors.faint}
-          style={st.input}
-          keyboardType={Platform.OS === 'android' ? 'default' : 'numbers-and-punctuation'}
-          autoCapitalize="none"
-          accessibilityLabel="At a time"
-        />
-        {timeText && !timeAt ? <Text style={shared.faint}>{p.timeHelp}</Text> : null}
-      </View>
-
-      <View style={st.field}>
-        <Text style={shared.label}>{p.where}</Text>
-        <TextInput
-          value={where}
-          onChangeText={setWhere}
-          placeholder={p.wherePlaceholder}
-          placeholderTextColor={colors.faint}
-          style={st.input}
-          accessibilityLabel="Where"
-        />
-      </View>
-
-      {stall ? (
+      {trigger && stall ? (
         <View style={st.field}>
           <Text style={shared.label}>{p.ifLabel}</Text>
           <TextInput value={obstacle} onChangeText={setObstacle} placeholder={p.ifPlaceholder} placeholderTextColor={colors.faint} style={st.input} accessibilityLabel="If I" />
           <Text style={shared.label}>{p.thenLabel}</Text>
           <TextInput value={response} onChangeText={setResponse} placeholder={p.thenPlaceholder} placeholderTextColor={colors.faint} style={st.input} accessibilityLabel="Then I'll" />
         </View>
-      ) : (
+      ) : null}
+
+      {trigger && !(extras || where) ? (
+        <Text style={st.link} onPress={() => setExtras(true)}>{p.addPlace}</Text>
+      ) : null}
+      {trigger && (extras || where) && !stall ? (
         <Text style={st.link} onPress={() => setStall(true)}>{p.stall}</Text>
-      )}
+      ) : null}
 
       {preview ? <Text style={st.preview}>{preview}</Text> : null}
       {timeAt && !state.nudges.enabled && Platform.OS !== 'web' ? <Text style={shared.faint}>{p.willAsk}</Text> : null}
@@ -176,5 +204,10 @@ const st = StyleSheet.create({
     borderRadius: 10, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 11,
   },
   preview: { color: colors.accent, fontFamily: fonts.serif, fontSize: 18, lineHeight: 25, fontStyle: 'italic' },
+  tabs: { flexDirection: 'row', backgroundColor: colors.bg, borderRadius: 10, padding: 3, borderWidth: 1, borderColor: colors.line },
+  tab: { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center' },
+  tabOn: { backgroundColor: colors.line },
+  tabText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
+  tabTextOn: { color: colors.ink },
   link: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, textDecorationLine: 'underline' },
 });

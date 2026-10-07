@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, BackHandler, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { EnergyLevel, Task } from '../domain/model';
@@ -168,18 +168,86 @@ export function CaptureBar({ onCapture }: { onCapture: (title: string, via?: 'vo
   );
 }
 
-export function AlsoHere({ tasks, onPick }: { tasks: Task[]; onPick: (id: string) => void }) {
+/** Edit a task's title in place. Shared by the Now card and the list. */
+export function RenameField({ title, onSave, onCancel }: { title: string; onSave: (t: string) => void; onCancel: () => void }) {
+  const [draft, setDraft] = useState(title);
+  useBackToClose(true, onCancel);
+  return (
+    <View style={{ gap: space.sm }}>
+      <TextInput
+        value={draft}
+        onChangeText={setDraft}
+        onSubmitEditing={() => onSave(draft)}
+        autoFocus
+        selectTextOnFocus
+        returnKeyType="done"
+        style={s.captureInput}
+        accessibilityLabel="Task name"
+      />
+      <View style={s.row}>
+        <Button kind="primary" label={copy.save} onPress={() => onSave(draft)} />
+        <Button label={copy.cancel} onPress={onCancel} />
+      </View>
+    </View>
+  );
+}
+
+type RowMode = 'closed' | 'open' | 'renaming';
+
+/** Tapping a task opens its choices instead of silently doing one of them. */
+function TaskRow({ task, onPick, onRename, onRelease }: {
+  task: Task; onPick: () => void; onRename: (t: string) => void; onRelease: () => void;
+}) {
+  const [mode, setMode] = useState<RowMode>('closed');
+  const close = useCallback(() => setMode('closed'), []);
+  useBackToClose(mode === 'open', close);
+  return (
+    <View style={[s.listItem, mode !== 'closed' && s.listItemOpen]}>
+      {mode === 'renaming' ? (
+        <RenameField title={task.title} onCancel={close} onSave={(t) => { onRename(t); close(); }} />
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: mode === 'open' }}
+          accessibilityHint={copy.rowHint}
+          onPress={() => setMode(mode === 'open' ? 'closed' : 'open')}
+          style={{ gap: 2 }}
+        >
+          <Text style={s.listTitle} numberOfLines={mode === 'open' ? undefined : 1}>{task.title}</Text>
+          <Text style={s.faint} numberOfLines={1}>
+            {task.state === 'started' ? 'started · ' : ''}{task.duration.experiential.label}
+          </Text>
+        </Pressable>
+      )}
+      {mode === 'open' && (
+        <View style={[s.row, { marginTop: space.sm }]}>
+          <Button kind="primary" label={copy.doNow} onPress={() => { close(); onPick(); }} />
+          <Button label={copy.rename} onPress={() => setMode('renaming')} />
+          <Button label={copy.letGo} onPress={() => { close(); onRelease(); }} />
+        </View>
+      )}
+    </View>
+  );
+}
+
+export function AlsoHere({ tasks, onPick, onRename, onRelease }: {
+  tasks: Task[];
+  onPick: (id: string) => void;
+  onRename: (id: string, title: string) => void;
+  onRelease: (id: string) => void;
+}) {
   if (!tasks.length) return null;
   return (
     <View style={{ gap: space.sm }}>
       <Text style={s.label}>{copy.alsoHere}</Text>
       {tasks.map((t) => (
-        <Pressable key={t.id} accessibilityRole="button" onPress={() => onPick(t.id)} style={s.listItem}>
-          <Text style={s.listTitle} numberOfLines={1}>{t.title}</Text>
-          <Text style={s.faint} numberOfLines={1}>
-            {t.state === 'started' ? 'started · ' : ''}{t.duration.experiential.label}
-          </Text>
-        </Pressable>
+        <TaskRow
+          key={t.id}
+          task={t}
+          onPick={() => onPick(t.id)}
+          onRename={(title) => onRename(t.id, title)}
+          onRelease={() => onRelease(t.id)}
+        />
       ))}
     </View>
   );
@@ -240,6 +308,7 @@ export const s = StyleSheet.create({
   micOn: { backgroundColor: colors.accent, borderColor: colors.accent, overflow: 'hidden' },
   micRing: { backgroundColor: '#F0C46A' },
   listItem: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, gap: 2 },
+  listItemOpen: { backgroundColor: colors.surface, marginHorizontal: -space.sm, paddingHorizontal: space.sm, borderRadius: 10 },
   listTitle: { color: colors.ink, fontFamily: fonts.sans, fontSize: 15 },
   flash: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,14,13,0.82)' },
   flashText: { color: colors.win, fontFamily: fonts.serif, fontSize: 56 },
