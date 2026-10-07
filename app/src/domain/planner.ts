@@ -3,7 +3,7 @@
  * (deadlines arrive with the next slice). See DayAllocation in the design model.
  */
 import { isWaitingOnCue } from './intention';
-import type { EnergyCost, EnergyLevel, Task } from './model';
+import type { EnergyCost, EnergyLevel, ISODateTime, Task } from './model';
 import type { AppState } from './reducer';
 
 /** Lower is a better fit. Missing entries mean "don't put this on the Now card at this energy". */
@@ -23,11 +23,20 @@ function fitRank(t: Task, energy: EnergyLevel | undefined): number | undefined {
   return FIT[energy][t.energy];
 }
 
-export function rankTasks(tasks: Task[], energy: EnergyLevel | undefined): Task[] {
+/** "Not now" or "stop here" means it: for a few hours that task goes behind everything else. */
+export const SET_ASIDE_HOURS = 4;
+
+function setAside(t: Task, at: ISODateTime | undefined): boolean {
+  return !!at && !!t.lastDeferredAt && Date.parse(at) - Date.parse(t.lastDeferredAt) < SET_ASIDE_HOURS * 3_600_000;
+}
+
+/** Pass `at` to honour a recent "not now"; without it, only the order of deferrals counts. */
+export function rankTasks(tasks: Task[], energy: EnergyLevel | undefined, at?: ISODateTime): Task[] {
   return tasks
     .filter(isActive)
     .filter((t) => fitRank(t, energy) !== undefined)
     .sort((a, b) =>
+      (Number(setAside(a, at)) - Number(setAside(b, at))) ||
       (fitRank(a, energy)! - fitRank(b, energy)!) ||
       // Planned for a cue that hasn't happened: it waits for its moment.
       (Number(isWaitingOnCue(a)) - Number(isWaitingOnCue(b))) ||
@@ -46,9 +55,9 @@ export interface NowPick {
   heldBack: number;
 }
 
-export function pickNow(state: AppState): NowPick {
+export function pickNow(state: AppState, at?: ISODateTime): NowPick {
   const active = state.tasks.filter(isActive);
-  const ranked = rankTasks(state.tasks, state.energy);
+  const ranked = rankTasks(state.tasks, state.energy, at);
   const pinned = state.pinnedNowId ? active.find((t) => t.id === state.pinnedNowId) : undefined;
   // A cue the person planned for just happened. That beats energy fit: they chose this moment.
   const fired = active

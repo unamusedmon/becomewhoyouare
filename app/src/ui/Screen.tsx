@@ -41,5 +41,5 @@ const st = StyleSheet.create({
   scroll: { padding: space.md, gap: space.lg, maxWidth: 640, width: '100%', alignSelf: 'center' },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   brand: { color: colors.faint, fontFamily: fonts.serif, fontSize: 15, letterSpacing: 1, fontStyle: 'italic' },
-  nav: { color: colors.accent, fontFamily: fonts.sans, fontSize: 15 },
+  nav: { color: colors.muted, fontFamily: fonts.sans, fontSize: 15 },
 });
