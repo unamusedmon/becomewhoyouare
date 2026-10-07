@@ -15,6 +15,8 @@ interface Props {
   task: Task;
   reason?: string;
   becomings: Becoming[];
+  /** First-run coaching: one line saying what to do, until the first step is ever done. */
+  showHint?: boolean;
   /** All tasks, for "after X" plans. */
   tasks: Task[];
   dispatch: Dispatch;
@@ -22,7 +24,7 @@ interface Props {
 }
 
 /** The heart of the app: one task, shown as its first physical step. */
-export function NowCard({ task, reason, becomings, tasks, dispatch, onWin }: Props) {
+export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, onWin }: Props) {
   const [justStarted, setJustStarted] = useState(false);
   const [editing, setEditing] = useState(false);
   const [planning, setPlanning] = useState(false);
@@ -47,7 +49,7 @@ export function NowCard({ task, reason, becomings, tasks, dispatch, onWin }: Pro
   const fired = !!task.intention?.firedAt;
   const plan = task.intention && !fired ? intentionSentence(task, tasks) : undefined;
   const stall = task.intention ? obstacleSentence(task.intention) : undefined;
-  const meta = [task.title, task.duration.experiential.label, feeds ? copy.feeds(feeds.statement) : fired ? undefined : reason].filter(Boolean).join(' · ');
+  const meta = [task.duration.experiential.label, feeds ? copy.feeds(feeds.statement) : fired ? undefined : reason].filter(Boolean).join(' · ');
 
   if (planning) {
     return <PlanEditor task={task} tasks={tasks} dispatch={dispatch} onDone={(saved) => { setPlanning(false); if (saved) onWin(copy.plan.saved); }} />;
@@ -104,7 +106,7 @@ export function NowCard({ task, reason, becomings, tasks, dispatch, onWin }: Pro
           <Text style={shared.faint}>{task.title}</Text>
           <View style={shared.row}>
             <Button kind="primary" label={copy.keepGoing} onPress={() => setJustStarted(false)} />
-            <Button label={copy.thatCounts} onPress={() => dispatch({ type: 'pause', taskId: id })} />
+            <Button label={copy.thatCounts} onPress={() => { setJustStarted(false); dispatch({ type: 'pause', taskId: id }); }} />
           </View>
         </View>
       );
@@ -125,21 +127,31 @@ export function NowCard({ task, reason, becomings, tasks, dispatch, onWin }: Pro
 
   return (
     <View style={st.card}>
-      <Text style={[shared.label, fired && { color: colors.accent }]}>{fired ? copy.plan.firedHeader : copy.nowHeader}</Text>
-      <Text style={st.step} accessibilityRole="header">{task.firstStep.text}</Text>
-      <Text style={shared.faint}>{meta}</Text>
+      {/* Read top to bottom: what this is for, the one thing to do, the one button to press. */}
+      <View style={{ gap: 2 }}>
+        {fired ? <Text style={[shared.label, { color: colors.accent }]}>{copy.plan.firedHeader}</Text> : null}
+        <Text style={st.task} numberOfLines={2}>{task.title}</Text>
+        <Text style={shared.faint}>{meta}</Text>
+      </View>
+      <View style={st.divider} />
+      <View style={{ gap: space.xs }}>
+        <Text style={st.stepLabel}>{copy.firstStepLabel}</Text>
+        <Text style={st.step} accessibilityRole="header">{task.firstStep.text}</Text>
+      </View>
+      {showHint ? <Text style={st.hint}>{copy.firstStepHint}</Text> : null}
       {plan ? <Text style={st.stall}>{plan}</Text> : null}
       {stall ? <Text style={st.stall}>{stall}</Text> : null}
-      <View style={shared.row}>
-        <Button
-          kind="primary"
-          label={copy.didIt}
-          onPress={() => { dispatch({ type: 'first_step_done', taskId: id }); setJustStarted(true); onWin(copy.started); }}
-        />
+      <Button
+        kind="primary"
+        wide
+        label={copy.didIt}
+        onPress={() => { dispatch({ type: 'first_step_done', taskId: id }); setJustStarted(true); onWin(copy.started); }}
+      />
+      <View style={[shared.row, { justifyContent: 'center', gap: space.lg }]}>
         <Button label={copy.tooBig} onPress={() => dispatch({ type: 'shrink', taskId: id })} />
         <Button label={copy.notNow} onPress={() => dispatch({ type: 'not_now', taskId: id })} />
       </View>
-      <View style={[shared.row, { gap: space.md }]}>
+      <View style={[shared.row, { justifyContent: 'center', gap: space.md }]}>
         {task.firstStep.alternatives?.length ? (
           <Text style={st.link} onPress={() => dispatch({ type: 'next_alternative', taskId: id })}>{copy.anotherStep}</Text>
         ) : null}
@@ -153,6 +165,10 @@ export function NowCard({ task, reason, becomings, tasks, dispatch, onWin }: Pro
 const st = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: space.lg, gap: space.md },
   step: { color: colors.ink, fontFamily: fonts.serif, fontSize: 30, lineHeight: 38 },
+  task: { color: colors.ink, fontFamily: fonts.sans, fontSize: 17, lineHeight: 23, opacity: 0.9 },
+  stepLabel: { color: colors.accent, fontFamily: fonts.sans, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase' },
+  hint: { color: colors.muted, fontFamily: fonts.sans, fontSize: 14, lineHeight: 20 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.line },
   input: { borderBottomWidth: 1, borderBottomColor: colors.accent, paddingVertical: space.xs },
   title: { color: colors.ink, fontFamily: fonts.serif, fontSize: 24, lineHeight: 30 },
   body: { color: colors.ink, fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, opacity: 0.85 },

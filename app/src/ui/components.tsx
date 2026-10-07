@@ -6,13 +6,13 @@ import type { EnergyLevel, Task } from '../domain/model';
 import { copy } from './copy';
 import { colors, fonts, space } from './theme';
 
-export function Button({ label, onPress, kind = 'quiet' }: { label: string; onPress: () => void; kind?: 'primary' | 'quiet' }) {
+export function Button({ label, onPress, kind = 'quiet', wide }: { label: string; onPress: () => void; kind?: 'primary' | 'quiet'; wide?: boolean }) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       android_ripple={{ color: kind === 'primary' ? '#B8862E' : colors.line }}
-      style={({ pressed }) => [kind === 'primary' ? s.primary : s.quiet, pressed && Platform.OS !== 'android' && { opacity: 0.7 }]}
+      style={({ pressed }) => [kind === 'primary' ? s.primary : s.quiet, wide && s.wide, pressed && Platform.OS !== 'android' && { opacity: 0.7 }]}
     >
       <Text style={kind === 'primary' ? s.primaryText : s.quietText}>{label}</Text>
     </Pressable>
@@ -34,6 +34,16 @@ export function useBackToClose(active: boolean, close: () => void) {
 const LEVELS: EnergyLevel[] = ['high', 'medium', 'low', 'fried'];
 
 export function EnergyBar({ value, onChange }: { value?: EnergyLevel; onChange: (v: EnergyLevel | undefined) => void }) {
+  const [open, setOpen] = useState(false);
+  // Once answered, the question shrinks to one quiet line so the task gets the attention.
+  if (value && !open) {
+    return (
+      <Text style={s.faint}>
+        {copy.energyNow(copy.energyLabels[value])}{'  '}
+        <Text style={s.inlineLink} onPress={() => setOpen(true)} accessibilityRole="button">{copy.change}</Text>
+      </Text>
+    );
+  }
   return (
     <View style={{ gap: space.sm }}>
       <Text style={s.label}>{copy.energyQuestion}</Text>
@@ -45,7 +55,7 @@ export function EnergyBar({ value, onChange }: { value?: EnergyLevel; onChange: 
               key={lvl}
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
-              onPress={() => onChange(on ? undefined : lvl)}
+              onPress={() => { onChange(on ? undefined : lvl); setOpen(false); }}
               style={[s.chip, on && s.chipOn]}
             >
               <Text style={[s.chipText, on && s.chipTextOn]}>{copy.energyLabels[lvl]}</Text>
@@ -145,11 +155,13 @@ export const s = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, alignItems: 'center' },
   label: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, letterSpacing: 0.3 },
   faint: { color: colors.faint, fontFamily: fonts.sans, fontSize: 13 },
+  inlineLink: { color: colors.muted, textDecorationLine: 'underline' },
   chip: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
   chipOn: { borderColor: colors.accent, backgroundColor: '#2A2214' },
   chipText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
   chipTextOn: { color: colors.accent },
   primary: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 22, paddingVertical: 13, overflow: 'hidden' },
+  wide: { alignSelf: 'stretch', alignItems: 'center', paddingVertical: 16 },
   primaryText: { color: '#17130A', fontFamily: fonts.sans, fontSize: 16, fontWeight: '600' },
   quiet: { paddingHorizontal: 10, paddingVertical: 13, borderRadius: 10, overflow: 'hidden' },
   quietText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 15 },

@@ -7,7 +7,10 @@ export const copy = {
   energyLabels: { high: 'plenty', medium: 'some', low: 'not much', fried: 'fried' } as Record<EnergyLevel, string>,
   friedNote: 'Then today is autopilot day. Only the light things are showing.',
 
-  nowHeader: 'Next',
+  firstStepLabel: 'First step',
+  firstStepHint: 'Do only this. Then tap the button.',
+  energyNow: (level: string) => `Force right now: ${level}.`,
+  change: 'change',
   didIt: 'I did it',
   tooBig: 'still too big',
   notNow: 'not now',

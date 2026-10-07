@@ -1,7 +1,7 @@
 import type { EnergyCost } from './model';
 
 export type Category =
-  | 'email' | 'call' | 'text' | 'appointment' | 'write' | 'clean' | 'admin'
+  | 'email' | 'call' | 'text' | 'appointment' | 'fix' | 'write' | 'clean' | 'admin'
   | 'shop' | 'exercise' | 'read' | 'generic';
 
 // Order matters: the first match wins ("email the dentist" is email, not appointment).
@@ -10,6 +10,7 @@ const CATEGORY_KEYWORDS: [Category, RegExp][] = [
   ['text', /\b(text|message|dm|whatsapp|slack)\b/],
   ['call', /\b(call|phone|ring)\b/],
   ['appointment', /^book\b|\b(schedule|appointment|dentist|doctor|therapist|haircut|vet)\b/],
+  ['fix', /\b(fix|repair|broken|troubleshoot|reinstall|reboot)\b/],
   ['admin', /\b(tax(es)?|bills?|pay|invoice|forms?|paperwork|insurance|bank|renew|passport|budget)\b/],
   ['write', /\b(write|draft|essay|chapter|report|paper|post|blog|thesis|article|proposal|resume|cv)\b/],
   ['clean', /\b(clean|tidy|dishes|laundry|vacuum|mop|declutter|trash|bathroom|kitchen)\b/],
@@ -39,7 +40,7 @@ export function inferEnergy(title: string): EnergyCost {
 }
 
 const LEADING_VERBS =
-  /^(please\s+)?(i need to|need to|have to|gotta|should|must|remember to|don't forget to|try to)?\s*(write|do|finish|send|call|email|e-mail|text|clean|go to|pay|buy|fix|make|book|schedule|start|work on|deal with|handle|read|study|get|reply to|order|renew|file|sort out|sort)?\s*/i;
+  /^(please\s+)?(i need to|need to|have to|gotta|should|must|remember to|don't forget to|try to)?\s*(write|do|finish|send|call|email|e-mail|text|clean|go to|pay|buy|fix|repair|troubleshoot|make|book|schedule|start|work on|deal with|handle|read|study|get|reply to|order|renew|file|sort out|sort)?\s*/i;
 
 /** "Write email draft to landlord" → "email draft to landlord". Keeps at most 5 words. */
 export function extractObject(title: string): string {

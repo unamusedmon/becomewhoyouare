@@ -48,9 +48,10 @@ export default function NowScreen() {
 
   if (hydrated && !state.onboarding.completedAt) return <Redirect href="/onboarding" />;
 
-  const now = pickNow(state);
+  const at = new Date().toISOString();
+  const now = pickNow(state, at);
   // Only what fits current energy; the rest is summarized by the "resting" line.
-  const others = rankTasks(state.tasks, state.energy).filter((t) => t.id !== now.task?.id && !isWaitingOnCue(t));
+  const others = rankTasks(state.tasks, state.energy, at).filter((t) => t.id !== now.task?.id && !isWaitingOnCue(t));
   const waiting = state.tasks.filter((t) => isActive(t) && isWaitingOnCue(t) && t.id !== now.task?.id);
   const becoming = state.becomings.find((b) => b.status === 'active');
   const askFrequency =
@@ -71,7 +72,12 @@ export default function NowScreen() {
         ) : null}
 
         {!hydrated ? null : now.task ? (
-          <NowCard task={now.task} reason={now.reason} becomings={state.becomings} tasks={state.tasks} dispatch={dispatch} onWin={onWin} />
+          <NowCard
+            task={now.task}
+            reason={now.reason}
+            becomings={state.becomings}
+            showHint={!state.events.some((e) => e.type === 'first_step_done')}
+            tasks={state.tasks} dispatch={dispatch} onWin={onWin} />
         ) : (
           <View style={{ paddingVertical: 24, gap: 24 }}>
             <Text style={screenStyles.h2}>{copy.emptyNow}</Text>

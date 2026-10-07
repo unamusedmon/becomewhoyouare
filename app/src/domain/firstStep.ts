@@ -108,6 +108,14 @@ const LADDERS: Record<Category, (c: Ctx) => Ladder> = {
       : ['Put three things where they go', 'Take the trash bag out of the bin', 'Clear one square foot of counter, any foot'],
     shrink: ['Pick up one thing and put it away', 'Stand in the room'],
   }),
+  fix: (c) => ({
+    candidates: [
+      `Write one line about what is wrong with the ${c.bare}`,
+      'Take a photo of the problem with your phone',
+      `Turn on the ${c.bare} and look at what it does`,
+    ],
+    shrink: [`Sit down in front of the ${c.bare}`, `Put your hand on the ${c.bare}`],
+  }),
   admin: (c) => ({
     candidates: [
       `Put the ${c.bare} paperwork on the table`,
@@ -147,7 +155,8 @@ const LADDERS: Record<Category, (c: Ctx) => Ladder> = {
       'Stand up and walk to where this happens',
       'Set a timer for one song and touch the first piece',
     ],
-    shrink: ['Put one thing for this in front of you', 'Stand up and stretch'],
+    // Even the smallest rung names the task, so it never reads as a random chore.
+    shrink: [`Put one thing for "${c.quoted}" in front of you`, `Sit down where "${c.quoted}" happens`],
   }),
 };
 

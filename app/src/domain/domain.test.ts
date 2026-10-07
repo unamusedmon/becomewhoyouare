@@ -11,6 +11,8 @@ import { initialState, reducer, SLIP_PROMPT_AFTER, type AppState } from './reduc
 const profile = initialState.profile;
 
 const SAMPLE_TITLES = [
+  'fix computer',
+  'Repair the bike',
   'Write email draft to landlord',
   'Do taxes',
   'Clean the kitchen',
@@ -64,7 +66,8 @@ test('classification', () => {
   assert.equal(categorize('Call mom'), 'call');
   assert.equal(categorize('Call the dentist'), 'call');
   assert.equal(categorize('Read the Nietzsche book'), 'read');
-  assert.equal(categorize('Fix the bike'), 'generic');
+  // "bike" is not exercise; fixing it is a repair.
+  assert.equal(categorize('Fix the bike'), 'fix');
   assert.equal(inferEnergy('Write email draft to landlord'), 'medium');
   assert.equal(inferEnergy('Write the thesis intro'), 'deep');
   assert.equal(inferEnergy('Do laundry'), 'autopilot');
@@ -158,4 +161,34 @@ test('stopping after the first step is a pause, not a slip', () => {
 test('admin steps never double the article: "Send the invoice" is not "the the invoice"', () => {
   const step = generateFirstStep('Send the invoice', profile);
   for (const text of [step.text, ...(step.alternatives ?? [])]) assert.doesNotMatch(text, /\bthe the\b/i);
+});
+
+test('every rung of the ladder still points at the task', () => {
+  const p = initialState.profile;
+  let step = generateFirstStep('fix computer', p);
+  assert.match(step.text, /computer/);
+  for (let i = 0; i < RESHAPE_DEPTH; i++) {
+    const smaller = shrinkFirstStep('fix computer', step, p);
+    if (!smaller) break;
+    assert.match(smaller.text, /computer/, smaller.text);
+    step = smaller;
+  }
+  let generic = generateFirstStep('asdf qwerty', p);
+  for (let i = 0; i < RESHAPE_DEPTH; i++) {
+    const smaller = shrinkFirstStep('asdf qwerty', generic, p);
+    if (!smaller) break;
+    assert.match(smaller.text, /asdf qwerty/, smaller.text);
+    generic = smaller;
+  }
+});
+
+test('"not now" sets a task aside for a few hours, even when it fits the energy best', () => {
+  let s = withTasks('Do the dishes', 'Call the dentist');
+  const t = (h: number) => new Date(Date.parse('2026-10-07T09:00:00Z') + h * 3_600_000).toISOString();
+  s = reducer(s, { type: 'set_energy', at: t(0), level: 'low' });
+  const dishes = s.tasks.find((x) => x.title === 'Do the dishes')!;
+  assert.equal(pickNow(s, t(0)).task?.id, dishes.id, 'autopilot fits low energy best');
+  s = reducer(s, { type: 'pause', at: t(0), taskId: dishes.id });
+  assert.notEqual(pickNow(s, t(1)).task?.id, dishes.id, 'set aside right after "stop here"');
+  assert.equal(pickNow(s, t(5)).task?.id, dishes.id, 'back once the few hours pass');
 });
