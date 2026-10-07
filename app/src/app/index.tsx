@@ -94,7 +94,7 @@ export default function NowScreen() {
 
         <WaitingForCue tasks={waiting} all={state.tasks} onFire={(taskId) => dispatch({ type: 'fire_intention', taskId })} />
 
-        <CaptureBar onCapture={(title) => dispatch({ type: 'capture', id: newId(), title })} />
+        <CaptureBar onCapture={(title, via) => dispatch({ type: 'capture', id: newId(), title, via })} />
 
         <AlsoHere tasks={others} onPick={(taskId) => dispatch({ type: 'pin_now', taskId })} />
       </Screen>

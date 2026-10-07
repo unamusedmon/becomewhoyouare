@@ -33,6 +33,13 @@
           "icon": "./assets/notification-icon.png",
           "color": "#D9A441"
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Lets you say tasks out loud instead of typing them.",
+          "speechRecognitionPermission": "Turns what you say into tasks."
+        }
       ]
     ]
   }

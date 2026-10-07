@@ -67,7 +67,7 @@ export function migrate(saved: Partial<AppState> & { version: 1 }): AppState {
 }
 
 export type Action =
-  | { type: 'capture'; at: ISODateTime; id: ID; title: string }
+  | { type: 'capture'; at: ISODateTime; id: ID; title: string; via?: 'voice' }
   | { type: 'open'; at: ISODateTime; taskId: ID }
   | { type: 'first_step_done'; at: ISODateTime; taskId: ID }
   | { type: 'complete'; at: ISODateTime; taskId: ID }
@@ -153,7 +153,7 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'capture': {
       if (!action.title.trim()) return state;
       const task = createTask(action.id, action.title, at, state.profile);
-      return { ...state, tasks: [...state.tasks, task], events: logEvent(state, task.id, 'created', at) };
+      return { ...state, tasks: [...state.tasks, task], events: logEvent(state, task.id, 'created', at, action.via ? { via: action.via } : undefined) };
     }
 
     case 'open': {

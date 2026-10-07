@@ -40,10 +40,18 @@ turn them on, capped at six a day, and their wording rotates. The plan is a pure
 (`src/domain/nudges.ts`); `src/state/nudgeSync.ts` mirrors it to Android with
 `expo-notifications`. Tapping a nudge opens that task on the Now card.
 
-Everything is stored on the device (AsyncStorage). Nothing leaves the phone yet.
+Slice 6 adds voice capture. Tap the mic on the Now screen, or "Talk" in onboarding, and say
+everything in one breath: "um I need to call mom and then fix the computer oh and taxes" becomes
+three tasks (`src/domain/spoken.ts` splits on "and then", "also", "I need to" and friends, never
+on a bare "and"). `src/state/voice.ts` wraps `expo-speech-recognition`. That module is native, so
+the in-app mic needs a development build (`npx expo run:android` or an EAS build); in Expo Go the
+mic button focuses the field and points you at the keyboard's own mic instead.
+
+Everything is stored on the device (AsyncStorage). The one exception is speech: the app asks
+Android for on-device recognition when the phone supports it, and otherwise the phone's speech
+service (usually Google's) may process the audio online. The app itself keeps no recordings.
 
 ## Not yet
 
 Model-generated first steps (needs a small server so no API key ships in the app),
-place cues, transition warnings before hard events (need a calendar), voice capture beyond
-the keyboard's dictation, natural-language search.
+place cues, transition warnings before hard events (need a calendar), natural-language search.

@@ -1,8 +1,10 @@
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, BackHandler, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { EnergyLevel, Task } from '../domain/model';
+import { splitSpoken } from '../domain/spoken';
+import { type Dictation, useDictation } from '../state/voice';
 import { copy } from './copy';
 import { colors, fonts, space } from './theme';
 
@@ -67,38 +69,101 @@ export function EnergyBar({ value, onChange }: { value?: EnergyLevel; onChange: 
   );
 }
 
-export function CaptureBar({ onCapture }: { onCapture: (title: string) => void }) {
+/** A mic drawn from shapes, so it matches the type and needs no icon font. */
+function MicGlyph({ color }: { color: string }) {
+  return (
+    <View style={{ alignItems: 'center' }} importantForAccessibility="no-hide-descendants">
+      <View style={{ width: 9, height: 14, borderRadius: 5, backgroundColor: color }} />
+      <View style={{ width: 15, height: 8, marginTop: -4, borderBottomLeftRadius: 8, borderBottomRightRadius: 8, borderWidth: 2, borderTopWidth: 0, borderColor: color }} />
+      <View style={{ width: 2, height: 4, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** Square mic button that glows while it listens. */
+export function MicButton({ listening, onPress, size = 46 }: { listening: boolean; onPress: () => void; size?: number }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!listening) return;
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => { loop.stop(); pulse.setValue(0); };
+  }, [listening, pulse]);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={listening ? copy.voiceStop : copy.voiceStart}
+      accessibilityState={{ selected: listening }}
+      onPress={onPress}
+      style={[s.addBtn, { width: size, height: size }, listening && s.micOn]}
+    >
+      {listening && <Animated.View style={[StyleSheet.absoluteFill, s.micRing, { opacity: pulse }]} />}
+      <MicGlyph color={listening ? colors.bg : colors.accent} />
+    </Pressable>
+  );
+}
+
+/**
+ * Mic behaviour shared by every capture surface: real dictation when the phone
+ * has it, otherwise focus the field and point at the keyboard's own mic.
+ */
+export function useMic(dictation: Dictation, input: RefObject<TextInput | null>, say: (note: string) => void) {
+  return async () => {
+    if (dictation.listening) return dictation.stop();
+    if (dictation.available && (await dictation.start())) return;
+    input.current?.focus();
+    say(copy.voiceKeyboard);
+  };
+}
+
+export function CaptureBar({ onCapture }: { onCapture: (title: string, via?: 'voice') => void }) {
   const [text, setText] = useState('');
   const [note, setNote] = useState<string | null>(null);
+  const input = useRef<TextInput>(null);
   useEffect(() => {
     if (!note) return;
-    const t = setTimeout(() => setNote(null), 2200);
+    const t = setTimeout(() => setNote(null), 3200);
     return () => clearTimeout(t);
   }, [note]);
+  const dictation = useDictation((said) => {
+    const titles = splitSpoken(said);
+    for (const t of titles) onCapture(t, 'voice');
+    setNote(titles.length ? copy.voiceCaught(titles.length) : copy.voiceMissed);
+  });
   const submit = () => {
     if (!text.trim()) return;
     onCapture(text);
     setText('');
     setNote(copy.captured);
   };
+  const mic = useMic(dictation, input, setNote);
   return (
     <View style={{ gap: space.xs }}>
       <View style={s.captureRow}>
         <TextInput
-          value={text}
+          ref={input}
+          value={dictation.listening ? dictation.heard : text}
           onChangeText={setText}
           onSubmitEditing={submit}
-          placeholder={copy.capturePlaceholder}
-          placeholderTextColor={colors.faint}
+          editable={!dictation.listening}
+          placeholder={dictation.listening ? copy.voiceListening : copy.capturePlaceholder}
+          placeholderTextColor={dictation.listening ? colors.accent : colors.faint}
           returnKeyType="done"
           style={s.captureInput}
           accessibilityLabel="Capture a task"
         />
-        <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={submit} style={s.addBtn}>
-          <Text style={s.addText}>+</Text>
-        </Pressable>
+        {text.trim() && !dictation.listening ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={submit} style={s.addBtn}>
+            <Text style={s.addText}>+</Text>
+          </Pressable>
+        ) : (
+          <MicButton listening={dictation.listening} onPress={mic} />
+        )}
       </View>
-      <Text style={[s.faint, { minHeight: 16 }]}>{note ?? ' '}</Text>
+      <Text style={[s.faint, { minHeight: 16 }]}>{note ?? (dictation.listening ? copy.voiceTapToStop : ' ')}</Text>
     </View>
   );
 }
@@ -172,6 +237,8 @@ export const s = StyleSheet.create({
   },
   addBtn: { width: 46, height: 46, borderRadius: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   addText: { color: colors.accent, fontSize: 24, lineHeight: 26 },
+  micOn: { backgroundColor: colors.accent, borderColor: colors.accent, overflow: 'hidden' },
+  micRing: { backgroundColor: '#F0C46A' },
   listItem: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, gap: 2 },
   listTitle: { color: colors.ink, fontFamily: fonts.sans, fontSize: 15 },
   flash: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,14,13,0.82)' },
