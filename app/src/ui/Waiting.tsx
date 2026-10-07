@@ -19,7 +19,7 @@ export function WaitingForCue({ tasks, all, onFire }: { tasks: Task[]; all: Task
             <Text style={st.cue} numberOfLines={2}>{cueText(t.intention!, all)}</Text>
             <Text style={shared.faint} numberOfLines={1}>{t.firstStep.text}</Text>
           </View>
-          {t.intention!.trigger.kind === 'event' ? (
+          {t.intention!.trigger.kind !== 'after_task' ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`${copy.plan.itsNow}: ${t.title}`}

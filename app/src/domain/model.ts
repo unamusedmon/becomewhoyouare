@@ -156,10 +156,11 @@ export interface OnboardingState {
 
 // ─── Slice 4: implementation intentions, overcoming evidence ─────────────────
 
-/** WHEN. Time and place triggers wait for notifications; the design model has them. */
+/** WHEN. Event cues are preferred; clock times work too, via a notification. Place waits. */
 export type IntentionTrigger =
   | { kind: 'event'; text: string }     // "I finish my coffee" (habit-stacked)
-  | { kind: 'after_task'; taskId: ID }; // "after I send the invoice"
+  | { kind: 'after_task'; taskId: ID }  // "after I send the invoice"
+  | { kind: 'time'; at: ISODateTime };  // "tomorrow at 9". Allowed, never the only support.
 
 /**
  * Gollwitzer's when-where-how. HOW is always the task's current first step, so the
@@ -177,4 +178,15 @@ export interface ImplementationIntention {
 export interface OvercomingSettings {
   /** Evidence key → when it was last shown on the Now screen. Each shows at most once a fortnight. */
   lastShownAt: Record<string, ISODateTime>;
+}
+
+// ─── Slice 5: nudges ─────────────────────────────────────────────────────────
+
+/** Notifications are a scarce resource: identical, frequent prompts stop working fast. */
+export interface NudgeSettings {
+  /** Off until the person turns it on and Android grants permission. */
+  enabled: boolean;
+  maxPerDay: number;
+  /** Local "HH:MM" for one daily nudge about something that has sat a while. Unset = none. */
+  dailyAt?: string;
 }

@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
+import { timeOfDay } from '../domain/intention';
 import type { LooseCadence } from '../domain/model';
 import { computeEvidence } from '../domain/overcoming';
 import { affirmedShare, CADENCE_ORDER } from '../domain/recurrence';
 import { MAX_BECOMINGS } from '../domain/reducer';
 import { useApp } from '../state/AppStateContext';
+import { requestNudgePermission } from '../state/nudgeSync';
 import { newId } from '../state/useAppState';
 import { s as shared } from '../ui/components';
 import { copy } from '../ui/copy';
@@ -20,6 +22,15 @@ export default function BecomingScreen() {
   const [statement, setStatement] = useState('');
   const [routineTitle, setRoutineTitle] = useState('');
   const [cadence, setCadence] = useState<LooseCadence>('weekly');
+  const [denied, setDenied] = useState(false);
+
+  const setNudges = async (enabled: boolean) => {
+    if (!enabled) return dispatch({ type: 'set_nudges', patch: { enabled: false } });
+    const granted = await requestNudgePermission().catch(() => false);
+    setDenied(!granted);
+    if (granted) dispatch({ type: 'set_nudges', patch: { enabled: true } });
+  };
+  const hhmm = (t: string) => { const [h, m] = t.split(':').map(Number); return timeOfDay(new Date(2026, 0, 1, h, m).toISOString()); };
 
   const active = state.becomings.filter((x) => x.status === 'active');
   const routines = state.routines.filter((r) => r.status === 'active');
@@ -146,6 +157,44 @@ export default function BecomingScreen() {
           accessibilityLabel={b.recurrenceSetting}
         />
       </View>
+
+      {Platform.OS !== 'web' ? (
+        <View style={st.section}>
+          <View style={st.row}>
+            <Text style={st.settingText}>{b.nudgesSetting}</Text>
+            <Switch
+              value={state.nudges.enabled}
+              onValueChange={(v) => { setNudges(v); }}
+              trackColor={{ true: colors.accent, false: colors.line }}
+              thumbColor={colors.ink}
+              accessibilityLabel={b.nudgesSetting}
+            />
+          </View>
+          <Text style={shared.faint}>{denied ? b.nudgesDenied : b.nudgesNote}</Text>
+          {state.nudges.enabled ? (
+            <>
+              <Text style={st.settingText}>{b.dailyLabel}</Text>
+              <View style={shared.row}>
+                {[undefined, ...b.dailyTimes].map((t) => {
+                  const on = state.nudges.dailyAt === t;
+                  return (
+                    <Pressable
+                      key={t ?? 'off'}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      onPress={() => dispatch({ type: 'set_nudges', patch: { dailyAt: t } })}
+                      android_ripple={{ color: colors.line }}
+                      style={[shared.chip, on && shared.chipOn]}
+                    >
+                      <Text style={[shared.chipText, on && shared.chipTextOn]}>{t ? hhmm(t) : b.dailyOff}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
+        </View>
+      ) : null}
     </Screen>
   );
 }

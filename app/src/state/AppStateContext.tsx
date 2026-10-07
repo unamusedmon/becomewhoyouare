@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { AppState as RNAppState } from 'react-native';
 
 import type { AppState } from '../domain/reducer';
+import { useNudgeSync } from './nudgeSync';
 import { useAppState, type Dispatch } from './useAppState';
 
 interface Ctx {
@@ -17,7 +18,8 @@ const TICK_MS = 60_000;
 /** Holds app state for every screen, and keeps routines spawning their tasks on time. */
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useAppState();
-  const { hydrated, dispatch } = value;
+  const { state, hydrated, dispatch } = value;
+  useNudgeSync(state, hydrated, dispatch);
 
   useEffect(() => {
     if (!hydrated) return;

@@ -34,10 +34,16 @@ overcoming evidence computed from real start times in `src/domain/overcoming.ts`
 the sample is big enough and the change is real). Android is the primary target: verify with
 `npx expo export --platform android`.
 
+Slice 5 adds gentle nudges: local notifications for plans tied to a clock time and, if
+you want it, one daily nudge about something that has sat a while. They're off until you
+turn them on, capped at six a day, and their wording rotates. The plan is a pure function
+(`src/domain/nudges.ts`); `src/state/nudgeSync.ts` mirrors it to Android with
+`expo-notifications`. Tapping a nudge opens that task on the Now card.
+
 Everything is stored on the device (AsyncStorage). Nothing leaves the phone yet.
 
 ## Not yet
 
 Model-generated first steps (needs a small server so no API key ships in the app),
-notifications (clock and place cues for intentions need them), voice capture beyond the
-keyboard's dictation, natural-language search.
+place cues, transition warnings before hard events (need a calendar), voice capture beyond
+the keyboard's dictation, natural-language search.
