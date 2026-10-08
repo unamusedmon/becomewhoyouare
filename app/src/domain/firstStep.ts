@@ -219,3 +219,11 @@ export function shrinkFirstStep(title: string, step: FirstStep, profile: UserPro
   const text = ladder.shrink[depth - 1];
   return asStep(validateFirstStep(text).ok ? text : GENERIC_SAFE, depth);
 }
+
+/** The bottom rung of the shrink ladder. A step the person wrote themselves is theirs, so it stays. */
+export function smallestFirstStep(title: string, step: FirstStep, profile: UserProfile): FirstStep {
+  if (step.source === 'user') return step;
+  let current = step;
+  for (let next = shrinkFirstStep(title, current, profile); next; next = shrinkFirstStep(title, current, profile)) current = next;
+  return current;
+}

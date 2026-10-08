@@ -115,7 +115,7 @@ export interface QuestionState {
   tasks: Task[];
   events: TaskEvent[];
   verdicts: { routineId: ID; followUp?: string; askedAt: ISODateTime }[];
-  recurrence: { enabled: boolean; maxQuestionsPerSession: number; lastSessionDay?: string };
+  recurrence: { enabled: boolean; maxQuestionsPerSession: number; lastSessionDay?: string; lastSessionMoment?: 'win' | 'neutral' };
   energy?: EnergyLevel;
 }
 
@@ -133,16 +133,25 @@ export function selectQuestions(s: QuestionState, now: ISODateTime): Routine[] {
     .map((x) => x.r);
 }
 
+export function completedToday(events: TaskEvent[], now: ISODateTime): boolean {
+  const today = localDay(now);
+  return events.some((e) => e.type === 'completed' && localDay(e.at) === today);
+}
+
 /**
- * Default moment: right after the day's first completion, riding a win.
+ * Moments alternate. Right after the day's first completion the question is cheap to
+ * reach, but the good mood inflates "yes" (Schwarz & Clore, 1983). So the next session
+ * comes at a neutral moment instead: before any win today, on a day that isn't low.
  * Never on a fried day, never twice in a day.
  */
 export function shouldOfferSession(s: QuestionState, now: ISODateTime): boolean {
   if (!s.recurrence.enabled || s.energy === 'fried') return false;
-  const today = localDay(now);
-  if (s.recurrence.lastSessionDay === today) return false;
-  const completedToday = s.events.some((e) => e.type === 'completed' && localDay(e.at) === today);
-  return completedToday && selectQuestions(s, now).length > 0;
+  if (s.recurrence.lastSessionDay === localDay(now)) return false;
+  const won = completedToday(s.events, now);
+  const moment = s.recurrence.lastSessionMoment === 'win'
+    ? !won && s.energy !== 'low'
+    : won;
+  return moment && selectQuestions(s, now).length > 0;
 }
 
 export function applyAnswer(r: Routine, answer: RecurrenceAnswer, at: ISODateTime): Routine {

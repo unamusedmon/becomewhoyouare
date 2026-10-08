@@ -35,7 +35,8 @@ export interface FirstStep {
   verb: string;
   object?: string;
   estSeconds: number;
-  source: 'generated' | 'user' | 'template';
+  /** 'holdout': the first-step test's "without" arm, which shows only the task. */
+  source: 'generated' | 'user' | 'template' | 'holdout';
   shrinkDepth: number;
   alternatives?: string[];
   doneAt?: ISODateTime;
@@ -67,6 +68,8 @@ export interface Task {
    * measures hesitation. That start is logged without a latency.
    */
   latencyInterrupted?: boolean;
+  /** Last time the task was put in front of the user at all. Long-hidden tasks come back once. */
+  lastSurfacedAt?: ISODateTime;
   /** Last "not now"; the planner puts recently deferred tasks behind the others. */
   lastDeferredAt?: ISODateTime;
   /** True while the slip question is waiting for an answer. */
@@ -150,6 +153,11 @@ export interface RecurrenceSettings {
   maxQuestionsPerSession: number;
   /** Local date ("2026-10-07") of the last session, so it runs at most once a day. */
   lastSessionDay?: string;
+  /**
+   * Where the last session happened. A good mood after a win tilts answers toward "yes"
+   * (mood as information), so sessions alternate between a win and a neutral moment.
+   */
+  lastSessionMoment?: 'win' | 'neutral';
   /** Sessions dismissed in a row. At 3 the app asks once whether to ask less. */
   dismissStreak: number;
   askedAboutFrequency: boolean;

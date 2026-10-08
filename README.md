@@ -27,7 +27,7 @@ Then he deleted it, and this app was born.
 
 **§3. The child.** You say who you are *becoming*. Not a goal. A person. "Someone who writes every week." The child is innocence, a new beginning, a self-propelled wheel, and also kind of bad at estimating time, which is why we help with that.
 
-**§4. The smallest first step.** Every task shows up as one tiny physical action. Not "do taxes." Instead: *"Put the tax paperwork on the table."* Willpower is a fairy tale for people with dopamine to spare. We start smaller.
+**§4. The smallest first step.** Every task shows up as one tiny physical action. Not "do taxes." Instead: *"Put the tax paperwork on the table."* Willpower, as a tank that runs dry, is a fairy tale: two enormous replications found the effect at roughly zero. We start smaller.
 
 **§5. Energy, not virtue.** You tell the app how much force you have right now: *plenty*, *some*, *not much*, or *fried*. When you are fried, only the light things show. The will to power is not about pushing harder. Sometimes it is about doing the dishes.
 
@@ -83,7 +83,7 @@ app/                    Expo (SDK 57) + React Native + TypeScript
 
 1. **The philosophy never overrides the science.** If a sentence sounds profound but adds guilt, load, or "just use willpower," it gets cut.
 2. **At most one aphorism per screen.** We are a to-do app, not a gift-shop calendar.
-3. **No variable-ratio rewards.** Slot machines are for people who are trying to take your dopamine, not give it back.
+3. **No variable-ratio rewards.** Slot machines are for people who are trying to take your attention, not give it back.
 4. **Be light.** *"What is good is light; whatever is divine moves on tender feet."* (*The Case of Wagner* §1)
 
 ---

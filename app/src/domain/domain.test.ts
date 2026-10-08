@@ -3,9 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { categorize, extractObject, extractRecipient, inferEnergy } from './classify';
-import { estimateDuration, toExperiential } from './duration';
+import { estimateDuration, toExperiential, updateCalibration } from './duration';
 import { generateFirstStep, nextAlternative, RESHAPE_DEPTH, shrinkFirstStep, validateFirstStep } from './firstStep';
-import { pickNow } from './planner';
+import { pickNow, RESURFACE_HIDDEN_DAYS } from './planner';
 import { initialState, reducer, SLIP_PROMPT_AFTER, type AppState } from './reducer';
 
 const profile = initialState.profile;
@@ -103,6 +103,44 @@ test('start latency is measured from first open to first step done', () => {
   assert.equal(task.state, 'started');
   assert.equal(task.stats.lastStartLatencySec, 95);
   assert.deepEqual(s.events.at(-1)?.meta, { latencySec: 95 });
+});
+
+test('calibration learns slowly from one-sitting tasks and keeps its buffer', () => {
+  assert.equal(updateCalibration(1.5, 20, 60), 1.8); // took 3x the guess
+  assert.equal(updateCalibration(1.5, 20, 5), 1.25); // faster than guessed
+  assert.equal(updateCalibration(1, 20, 2), 1); // never below the raw guess
+  assert.equal(updateCalibration(1.5, 20, 600), 1.5); // left open all day: ignored
+  assert.equal(updateCalibration(1.5, 20, 0.2), 1.5); // mis-tap: ignored
+});
+
+test('completing in one sitting updates that energy tier; a paused task does not', () => {
+  let s = withTasks('Write email draft to landlord');
+  const tier = s.tasks[0].energy;
+  const raw = s.tasks[0].duration.rawMinutes;
+  s = reducer(s, { type: 'first_step_done', at: plus(0), taskId: 't0' });
+  s = reducer(s, { type: 'complete', at: plus(raw * 3 * 60), taskId: 't0' });
+  assert.equal(s.profile.estimateCalibration[tier], updateCalibration(1.5, raw, raw * 3));
+
+  let p = withTasks('Write email draft to landlord');
+  p = reducer(p, { type: 'first_step_done', at: plus(0), taskId: 't0' });
+  p = reducer(p, { type: 'pause', at: plus(60), taskId: 't0' });
+  p = reducer(p, { type: 'complete', at: plus(raw * 3 * 60), taskId: 't0' });
+  assert.equal(p.profile.estimateCalibration[tier], 1.5);
+});
+
+test('a heavy task hidden on low days for a week comes back once, at its smallest step', () => {
+  let s = withTasks('Write the essay', 'Do the dishes');
+  s = reducer(s, { type: 'set_energy', at: plus(5), level: 'low' });
+  assert.equal(pickNow(s, plus(10)).task?.title, 'Do the dishes');
+  const later = plus(RESURFACE_HIDDEN_DAYS * 86_400 + 60);
+  const pick = pickNow(s, later);
+  assert.equal(pick.task?.title, 'Write the essay');
+  assert.equal(pick.reason, "it's been resting a while");
+  s = reducer(s, { type: 'open', at: later, taskId: 't0' });
+  assert.equal(s.tasks[0].firstStep.shrinkDepth, 2);
+  // Seen now: it rests again rather than taking the card every visit.
+  s = reducer(s, { type: 'not_now', at: plus(RESURFACE_HIDDEN_DAYS * 86_400 + 120), taskId: 't0' });
+  assert.equal(pickNow(s, plus(RESURFACE_HIDDEN_DAYS * 86_400 + 5 * 3600)).task?.title, 'Do the dishes');
 });
 
 test('a start after the app was backgrounded is logged without a latency', () => {

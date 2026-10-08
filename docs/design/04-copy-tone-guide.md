@@ -32,6 +32,7 @@
 | despite your ADHD, even with ADHD, fix, overcome your ADHD | Frames the brain as defective | "your brain works differently", "for how you work" |
 | streak broken, you lost your streak | Loss punishment | Streaks don't exist (see Progress) |
 | productivity, optimize, efficiency, KPIs | Corporate task manager voice | "force", "what you're building", "today's allocation" |
+| proven, clinically shown, science-backed, "for ADHD" as a claim of effect, dopamine hit/boost | Almost every mechanism here is tested in people in general, not in adults with ADHD, and brain-chemistry talk is pop neuroscience (see 06) | Say what it does: "plans tied to a moment get done more often", "you'll see if it helps you" |
 | just (as in "just do it") | Minimizes real difficulty | Drop the word |
 | "What doesn't kill me makes me stronger" | Romanticizes suffering. Real quote (*Twilight*, Maxims §8), wrong lesson for this app | — |
 

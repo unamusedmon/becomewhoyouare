@@ -43,6 +43,24 @@ export function estimateDuration(rawMinutes: Minutes, calibration: number): Dura
   };
 }
 
+/**
+ * Outside-view correction (Buehler et al., 1994): learn how much longer your tasks
+ * really take than the first guess, per energy tier. Slow-moving, and never below
+ * the raw guess, so one quick win can't strip the buffer away.
+ */
+export const CALIBRATION_WEIGHT = 0.2;
+export const CALIBRATION_MIN = 1;
+export const CALIBRATION_MAX = 3;
+/** Only one sitting counts: under a minute is a mis-tap, over four hours is a task left open. */
+export const MIN_SITTING_MIN = 1;
+export const MAX_SITTING_MIN = 240;
+
+export function updateCalibration(current: number, rawMinutes: Minutes, actualMinutes: Minutes): number {
+  if (rawMinutes <= 0 || actualMinutes < MIN_SITTING_MIN || actualMinutes > MAX_SITTING_MIN) return current;
+  const next = (1 - CALIBRATION_WEIGHT) * current + CALIBRATION_WEIGHT * (actualMinutes / rawMinutes);
+  return Math.round(Math.min(CALIBRATION_MAX, Math.max(CALIBRATION_MIN, next)) * 100) / 100;
+}
+
 /** Rough first guess before we have any history. */
 export function defaultRawMinutes(energy: EnergyCost, category: string): Minutes {
   if (category === 'call' || category === 'text') return 5;

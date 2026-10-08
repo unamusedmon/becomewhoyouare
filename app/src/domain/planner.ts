@@ -23,6 +23,26 @@ function fitRank(t: Task, energy: EnergyLevel | undefined): number | undefined {
   return FIT[energy][t.energy];
 }
 
+export function fitsEnergy(t: Task, energy: EnergyLevel | undefined): boolean {
+  return fitRank(t, energy) !== undefined;
+}
+
+/**
+ * Resting heavy tasks on low days is kind, but hiding the same task for weeks lets
+ * avoidance win quietly. After this long out of sight, it comes back once, at its
+ * smallest step. Never on a fried day.
+ */
+export const RESURFACE_HIDDEN_DAYS = 7;
+
+export function longHidden(state: AppState, at: ISODateTime): Task[] {
+  if (state.energy !== 'low') return [];
+  const cutoff = Date.parse(at) - RESURFACE_HIDDEN_DAYS * 86_400_000;
+  return state.tasks
+    .filter((t) => isActive(t) && !fitsEnergy(t, state.energy) && !isWaitingOnCue(t) && !setAside(t, at))
+    .filter((t) => Date.parse(t.lastSurfacedAt ?? t.createdAt) <= cutoff)
+    .sort((a, b) => Date.parse(a.lastSurfacedAt ?? a.createdAt) - Date.parse(b.lastSurfacedAt ?? b.createdAt));
+}
+
 /** "Not now" or "stop here" means it: for a few hours that task goes behind everything else. */
 export const SET_ASIDE_HOURS = 4;
 
@@ -63,12 +83,14 @@ export function pickNow(state: AppState, at?: ISODateTime): NowPick {
   const fired = active
     .filter((t) => t.intention?.firedAt)
     .sort((a, b) => Date.parse(b.intention!.firedAt!) - Date.parse(a.intention!.firedAt!))[0];
-  const task = pinned ?? fired ?? ranked[0];
+  const resurfaced = at ? longHidden(state, at)[0] : undefined;
+  const task = pinned ?? fired ?? resurfaced ?? ranked[0];
   const heldBack = active.filter((t) => t !== task && !ranked.includes(t)).length;
   if (!task) return { heldBack };
   let reason: string | undefined;
   if (pinned) reason = 'your pick';
   else if (task === fired) reason = 'you planned this';
+  else if (task === resurfaced) reason = "it's been resting a while";
   else if (state.energy && fitRank(task, state.energy) === 0) reason = 'fits your energy';
   else if (task.state === 'started') reason = 'already started';
   return { task, reason, heldBack };

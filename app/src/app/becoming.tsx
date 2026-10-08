@@ -3,7 +3,8 @@ import { Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from '
 
 import { timeOfDay } from '../domain/intention';
 import type { LooseCadence } from '../domain/model';
-import { computeEvidence } from '../domain/overcoming';
+import { firstStepTestProgress, firstStepTestResult } from '../domain/experiment';
+import { aboutDuration, computeEvidence } from '../domain/overcoming';
 import { affirmedShare, CADENCE_ORDER } from '../domain/recurrence';
 import { MAX_BECOMINGS } from '../domain/reducer';
 import { useApp } from '../state/AppStateContext';
@@ -37,6 +38,13 @@ export default function BecomingScreen() {
   const routines = state.routines.filter((r) => r.status === 'active');
   const share = affirmedShare(state.routines);
   const evidence = computeEvidence(state.tasks, state.events, new Date().toISOString());
+  const test = firstStepTestResult(state.events, state.tasks);
+  const testProgress = firstStepTestProgress(state.events);
+  const testLine = test
+    ? aboutDuration(test.withStep.medianSec) === aboutDuration(test.withoutStep.medianSec)
+      ? b.testSame(test.withStep.n, test.withoutStep.n)
+      : b.testResult(aboutDuration(test.withStep.medianSec), aboutDuration(test.withoutStep.medianSec), test.withStep.n, test.withoutStep.n)
+    : undefined;
   const anyAsked = state.routines.some((r) => r.recurrence.standing !== 'unasked');
   // Everything out of sight, newest first. Onboarding's "not now" lands here too, so nothing is ever lost.
   const [hintsReset, setHintsReset] = useState(false);
@@ -101,6 +109,7 @@ export default function BecomingScreen() {
         <Text style={shared.label}>{copy.evidence.section}</Text>
         {evidence.length === 0 ? <Text style={shared.faint}>{copy.evidence.empty}</Text> : null}
         {evidence.map((e) => <Text key={e.key} style={st.evidence}>{e.headline}</Text>)}
+        {testLine ? <Text style={st.evidence}>{testLine}</Text> : null}
       </View>
 
       <View style={st.section}>
@@ -180,6 +189,22 @@ export default function BecomingScreen() {
           {hintsReset ? b.hintsResetDone : b.hintsReset}
         </Text>
       ) : hintsReset ? <Text style={st.resetHints}>{b.hintsResetDone}</Text> : null}
+
+      <View style={st.section}>
+        <View style={st.row}>
+          <Text style={st.settingText}>{b.testSetting}</Text>
+          <Switch
+            value={state.experiments.firstStepTest}
+            onValueChange={(enabled) => dispatch({ type: 'set_first_step_test', enabled })}
+            trackColor={{ true: colors.accent, false: colors.line }}
+            thumbColor={colors.ink}
+            accessibilityLabel={b.testSetting}
+          />
+        </View>
+        {state.experiments.firstStepTest ? (
+          <Text style={shared.faint}>{b.testNote} {!test ? b.testProgress(testProgress.started, testProgress.needed) : ''}</Text>
+        ) : null}
+      </View>
 
       <View style={[st.row, st.setting]}>
         <Text style={st.settingText}>{b.recurrenceSetting}</Text>
