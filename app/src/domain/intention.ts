@@ -1,7 +1,7 @@
 /**
  * Implementation intentions: "When X, I'll do Y." Planning the cue hands the start
- * over to the situation instead of to willpower (Gollwitzer & Sheeran 2006, d ≈ 0.65).
- * See docs/design/05-additional-science.md.
+ * over to the situation instead of to willpower. Effects are reliable but moderate
+ * (Sheeran, Listrom & Gollwitzer 2024: .27 ≤ d ≤ .66 across 642 tests). See docs/design/06-science-audit.md.
  */
 import type { ImplementationIntention, ISODateTime, Task } from './model';
 

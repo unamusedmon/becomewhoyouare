@@ -11,6 +11,7 @@
 | 03 | [`03-recurrence-triage-flow.md`](03-recurrence-triage-flow.md) | The eternal recurrence question: when it's asked, selection logic, the yes/no/not-sure flow, tolls vs. choices |
 | 04 | [`04-copy-tone-guide.md`](04-copy-tone-guide.md) | Voice, banned words, copy for every moment, vetted aphorism library, visual tone |
 | 05 | [`05-additional-science.md`](05-additional-science.md) | Evidence grades for the original spec and 14 added mechanisms, with citations |
+| 06 | [`06-science-audit.md`](06-science-audit.md) | Audit of the shipped app against the research: per-feature verdicts, corrections to 02–05, ranked fix list |
 
 ## The five load-bearing ideas
 

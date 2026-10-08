@@ -8,16 +8,16 @@ Evidence grades: **●●● strong** (meta-analyses or multiple RCTs) · **●�
 
 | Mechanism | Grade | Note |
 |---|---|---|
-| Implementation intentions | ●●● | Gollwitzer & Sheeran (2006) meta-analysis, d ≈ 0.65 for goal attainment. ADHD-specific lab evidence too: Gawrilow & Gollwitzer (2008) found if-then plans improved response inhibition in children with ADHD. |
+| Implementation intentions | ●●● | Gollwitzer & Sheeran (2006) meta-analysis, d ≈ 0.65 for goal attainment (94 tests). The much larger update (Sheeran, Listrom & Gollwitzer, 2024; 642 tests) finds smaller but still reliable effects, .27 ≤ d ≤ .66 depending on outcome, larger with a true if-then format and rehearsal. ADHD-specific evidence is lab-only and in children: Gawrilow & Gollwitzer (2008) found if-then plans improved Go/No-Go inhibition. No adult ADHD trial found (see 06). |
 | Smallest first step / task breakdown | ●●○ | A core skill in CBT for adult ADHD (Safren et al., 2010 RCT; Solanto et al., 2010 meta-cognitive therapy RCT). The specific "2-minute physical step" is clinical practice more than an isolated, tested variable. |
 | Time-blindness accommodations | ●●○ | Timing and time-perception deficits in ADHD are well replicated (Noreika et al., 2013 review; Barkley's model). Experiential units are a design inference, not a tested intervention. Good inference, but worth A/B testing. |
 | Generous buffers | ●●● | The planning fallacy is robust in everyone (Buehler, Griffin & Ross, 1994). ADHD adds time-perception error on top. |
-| Externalizing working memory | ●●● | Working-memory deficits in adult ADHD are large (Kasper, Alderson & Hudec, 2012 meta-analysis). Barkley's principle: externalize information *at the point of performance*. |
+| Externalizing working memory | ●●○ | Working-memory deficits in ADHD are moderate and consistent: children (Kasper, Alderson & Hudec, 2012) and adults (Alderson et al., 2013, *Neuropsychology*; reported d ≈ 0.5). The deficit is well supported; that an app capturing tasks *compensates* for it is Barkley's clinical principle (externalize at the point of performance), not a tested intervention. |
 | Energy-based planning | ●●○ | Circadian and arousal variation is real, and ADHD is strongly associated with delayed sleep phase and evening chronotype (Coogan & McGowan, 2017 review). Matching task cost to state is sound. |
 | Interest / novelty / urgency / challenge | ●●○ | The four-word framing is Dodson's clinical heuristic, not a formal model. But it lines up with replicated findings on altered reward processing and delay aversion in ADHD (Volkow et al., 2009/2011; Sonuga-Barke, 2002). |
 | Dopamine-aware immediate feedback | ●●○ | Steeper delay discounting in ADHD is well supported (Jackson & MacKillop, 2016 meta-analysis), so immediate feedback is the right call. |
 | Body doubling | ●○○ | Hugely popular, but there is very little direct research. Related evidence: social facilitation (Zajonc, 1965) and accountability effects. Build it, keep it optional, measure it, and don't market it as proven. |
-| Guilt-free failure handling | ●●● | See *self-forgiveness* below. This is one of the best-supported items on your list, and it's the one most apps get wrong. |
+| Guilt-free failure handling | ●●○ | See *self-forgiveness* below. The evidence is correlational and modest (one 119-student study plus self-compassion correlations), but it all points the same way and the design costs nothing. Most apps get this wrong. |
 | "Intrinsic motivation is the only fuel" | ●○○ as stated | Rational quibble: urgency, which is extrinsic, *also* reliably works for ADHD. It's literally on your own list. The better claim is that **interest and meaning are the most sustainable fuel; urgency works but burns hot.** The design already reflects this, since it uses deadlines as one signal among several. |
 
 ## What I added
@@ -25,7 +25,7 @@ Evidence grades: **●●● strong** (meta-analyses or multiple RCTs) · **●�
 Each one says where it lives in the model (`01-data-model.ts`).
 
 ### 1. Self-forgiveness after a lapse reduces the next lapse ●●○
-Students who forgave themselves for procrastinating on one exam procrastinated less on the next (Wohl, Pychyl & Bennett, 2010). Self-compassion is associated with less procrastination (Sirois, 2014 meta-analysis). This turns "guilt-free" from a nice value into a **mechanism**: shame predicts more avoidance.
+Students who forgave themselves for procrastinating on one exam procrastinated less on the next (Wohl, Pychyl & Bennett, 2010; one correlational study, n ≈ 119). Self-compassion is associated with less procrastination (Sirois, 2014 meta-analysis). This turns "guilt-free" from a nice value into a **mechanism**: shame predicts more avoidance.
 → Slip copy (04), `SlipInsight`, no red states, no streak loss.
 
 ### 2. Procrastination is mood repair, not time mismanagement ●●○
@@ -53,7 +53,7 @@ Short bouts of moderate exercise produce small-to-moderate acute improvements in
 → Optional "movement primer" offer before a deep-focus block (5 min walk, one song of dancing). `EnergyCheckin.factors: 'moved_body'` lets the planner learn whether it helps *this* user.
 
 ### 8. Temptation bundling ●●○
-Pairing a "should" task with a "want" pleasure that you only allow during that task increased gym attendance (Milkman, Minson & Volpp, 2014). This brings the reward closer in time, which directly addresses steep delay discounting.
+Pairing a "should" task with a "want" pleasure that you only allow during that task increased gym attendance (Milkman, Minson & Volpp, 2014), though the effect faded within weeks, especially after a holiday break. Treat it as a starter, not a habit engine. This brings the reward closer in time, which directly addresses steep delay discounting.
 → `Task.hooks.pairedReward` ("the good playlist only plays during taxes").
 
 ### 9. Endowed progress & goal gradient ●●○
