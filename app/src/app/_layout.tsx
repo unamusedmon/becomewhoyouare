@@ -1,8 +1,6 @@
 import '../state/webcryptoShim';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
 
 import { AppStateProvider, useApp } from '../state/AppStateContext';
 import { colors } from '../ui/theme';
@@ -18,10 +16,6 @@ export default function RootLayout() {
 
 function Chrome() {
   const { theme } = useApp();
-  // The page behind the app shows on web overscroll; keep it the same paper as the app.
-  useEffect(() => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') document.body.style.backgroundColor = colors.bg;
-  }, [theme.mode]);
   return (
     <>
       <StatusBar style={theme.mode === 'light' ? 'dark' : 'light'} />

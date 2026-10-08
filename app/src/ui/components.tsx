@@ -12,8 +12,6 @@ import { colors, fonts, space, themed } from './theme';
 
 /** A setting: its label on the left, a switch on the right. */
 export function Toggle({ label, value, onChange, disabled }: { label: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
-  // The web Switch colors its thumb separately when on; without this it's a stock teal.
-  const web = Platform.OS === 'web' ? { activeThumbColor: colors.ink } : {};
   return (
     <View style={s.toggle}>
       <Text style={s.toggleText}>{label}</Text>
@@ -24,7 +22,6 @@ export function Toggle({ label, value, onChange, disabled }: { label: string; va
         trackColor={{ true: colors.accent, false: colors.line }}
         thumbColor={colors.ink}
         accessibilityLabel={label}
-        {...web}
       />
     </View>
   );
@@ -178,7 +175,6 @@ export function CaptureBar({ onCapture, autoFocus }: { onCapture: (title: string
           autoFocus={autoFocus}
           // Keep the keyboard up after adding, so a burst of thoughts can go in one after another.
           submitBehavior="submit"
-          {...(Platform.OS === 'web' ? ({ blurOnSubmit: false } as object) : null)}
           value={dictation.listening ? dictation.heard : text}
           onChangeText={setText}
           onSubmitEditing={submit}
@@ -304,7 +300,7 @@ export function WinFlash({ flash }: { flash: Flash | null }) {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!flash) return;
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     anim.setValue(0);
     Animated.sequence([
       Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 12 }),

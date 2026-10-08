@@ -1,12 +1,13 @@
 /**
- * WebDAV sync, for the phone and the web version alike. One JSON file holds the
- * synced state, sealed with a passphrase when encryption is on (src/domain/crypto.ts).
+ * WebDAV sync, shared with the web version (unamusedmon/becomewhoyouare-web), which
+ * reads and writes the same files. One JSON file holds the synced state, sealed with a
+ * passphrase when encryption is on (src/domain/crypto.ts).
  * An optional Org file mirrors it for Emacs or Orgzly, as .org.gpg when a GPG key is
  * imported (src/domain/pgp.ts), and edits made there come back in (src/domain/org.ts).
  * Merging rules: src/domain/sync.ts.
  *
- * Credentials live on this device only (AsyncStorage on Android, localStorage on the
- * web) and are never part of the synced state.
+ * Credentials live on this device only (AsyncStorage) and are never part of the
+ * synced state.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';

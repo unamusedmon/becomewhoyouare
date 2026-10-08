@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { firstStepTestProgress, firstStepTestResult } from '../domain/experiment';
 import { timeOfDay } from '../domain/intention';
@@ -55,35 +55,33 @@ export default function SettingsScreen() {
         <Toggle label={b.recurrenceSetting} value={state.recurrence.enabled} onChange={(enabled) => dispatch({ type: 'set_recurrence_enabled', enabled })} />
       </View>
 
-      {Platform.OS !== 'web' ? (
-        <View style={[st.section, st.setting]}>
-          <Text style={shared.label}>{o.notifications}</Text>
-          <Toggle label={b.nudgesSetting} value={state.nudges.enabled} onChange={(v) => { void setNudges(v); }} />
-          <Text style={shared.faint}>{denied ? b.nudgesDenied : b.nudgesNote}</Text>
-          {state.nudges.enabled ? (
-            <>
-              <Text style={st.settingText}>{b.dailyLabel}</Text>
-              <View style={shared.row}>
-                {[undefined, ...b.dailyTimes].map((t) => {
-                  const on = state.nudges.dailyAt === t;
-                  return (
-                    <Pressable
-                      key={t ?? 'off'}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: on }}
-                      onPress={() => dispatch({ type: 'set_nudges', patch: { dailyAt: t } })}
-                      android_ripple={{ color: colors.line }}
-                      style={[shared.chip, on && shared.chipOn]}
-                    >
-                      <Text style={[shared.chipText, on && shared.chipTextOn]}>{t ? hhmm(t) : b.dailyOff}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </>
-          ) : null}
-        </View>
-      ) : null}
+      <View style={[st.section, st.setting]}>
+        <Text style={shared.label}>{o.notifications}</Text>
+        <Toggle label={b.nudgesSetting} value={state.nudges.enabled} onChange={(v) => { void setNudges(v); }} />
+        <Text style={shared.faint}>{denied ? b.nudgesDenied : b.nudgesNote}</Text>
+        {state.nudges.enabled ? (
+          <>
+            <Text style={st.settingText}>{b.dailyLabel}</Text>
+            <View style={shared.row}>
+              {[undefined, ...b.dailyTimes].map((t) => {
+                const on = state.nudges.dailyAt === t;
+                return (
+                  <Pressable
+                    key={t ?? 'off'}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    onPress={() => dispatch({ type: 'set_nudges', patch: { dailyAt: t } })}
+                    android_ripple={{ color: colors.line }}
+                    style={[shared.chip, on && shared.chipOn]}
+                  >
+                    <Text style={[shared.chipText, on && shared.chipTextOn]}>{t ? hhmm(t) : b.dailyOff}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
+      </View>
 
       <View style={[st.section, st.setting]}>
         <Text style={shared.label}>{o.experiments}</Text>

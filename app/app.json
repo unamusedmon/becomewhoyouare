@@ -19,10 +19,6 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.unamusedmon.becomewhoyouare"
     },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "output": "single"
-    },
     "backgroundColor": "#0F0E0D",
     "scheme": "becomewhoyouare",
     "plugins": [

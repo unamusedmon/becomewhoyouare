@@ -184,7 +184,7 @@ export function PlanEditor({ task, tasks, dispatch, onDone, showHint }: { task: 
       ) : null}
 
       {preview ? <Text style={st.preview}>{preview}</Text> : null}
-      {timeAt && !state.nudges.enabled && Platform.OS !== 'web' ? <Text style={shared.faint}>{p.willAsk}</Text> : null}
+      {timeAt && !state.nudges.enabled ? <Text style={shared.faint}>{p.willAsk}</Text> : null}
 
       <View style={shared.row}>
         <Button kind="primary" label={p.save} onPress={() => { save(); }} />
