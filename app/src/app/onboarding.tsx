@@ -39,7 +39,7 @@ export default function Onboarding() {
     setHint(null);
     setVoiced((v) => new Set([...v, ...lines]));
     setDump((d) => [d.trimEnd(), ...lines].filter(Boolean).join('\n'));
-  });
+  }, setHint);
   const mic = useMic(dictation, dumpInput, setHint);
 
   const go = (next: Step) => {

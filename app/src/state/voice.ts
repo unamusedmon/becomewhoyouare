@@ -6,6 +6,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { copy } from '../ui/copy';
+
 type Mod = typeof import('expo-speech-recognition').ExpoSpeechRecognitionModule;
 type Sub = { remove(): void };
 
@@ -18,15 +20,7 @@ const mod: Mod | null = (() => {
   }
 })();
 
-/** Prefer keeping audio on the phone. If the on-device model turns out to be missing, the next try goes online. */
-let onDeviceFailed = false;
-function onDevice(): boolean {
-  try {
-    return !onDeviceFailed && !!mod?.supportsOnDeviceRecognition();
-  } catch {
-    return false;
-  }
-}
+const NORMAL_ENDINGS = new Set(['no-speech', 'aborted', 'speech-timeout']);
 
 function recognizerReady(): boolean {
   try {
@@ -48,9 +42,9 @@ export type Dictation = {
 
 /**
  * Listens until the person stops talking (or taps again) and hands over the final
- * transcript once. Long pauses are allowed: people think while dumping.
+ * transcript once. One utterance per tap; a few seconds of silence ends it.
  */
-export function useDictation(onFinal: (transcript: string) => void): Dictation {
+export function useDictation(onFinal: (transcript: string) => void, onProblem?: (note: string) => void): Dictation {
   const [available, setAvailable] = useState(recognizerReady);
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState('');
@@ -58,6 +52,8 @@ export function useDictation(onFinal: (transcript: string) => void): Dictation {
   const subs = useRef<Sub[]>([]);
   const onFinalRef = useRef(onFinal);
   onFinalRef.current = onFinal;
+  const onProblemRef = useRef(onProblem);
+  onProblemRef.current = onProblem;
 
   const cleanup = useCallback(() => {
     for (const s of subs.current) s.remove();
@@ -80,9 +76,9 @@ export function useDictation(onFinal: (transcript: string) => void): Dictation {
       return false;
     }
     cleanup();
-    const local = onDevice();
     finals.current = [];
     setHeard('');
+    let failure: string | null = null;
     subs.current = [
       mod.addListener('result', (e) => {
         const text = e.results[0]?.transcript ?? '';
@@ -91,8 +87,9 @@ export function useDictation(onFinal: (transcript: string) => void): Dictation {
       }),
       mod.addListener('error', (e) => {
         // "no-speech" and "aborted" are normal endings, not failures.
-        if (local && e.error === 'language-not-supported') onDeviceFailed = true;
-        else if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') setAvailable(false);
+        if (NORMAL_ENDINGS.has(e.error)) return;
+        failure = e.error;
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') setAvailable(false);
       }),
       mod.addListener('end', () => {
         cleanup();
@@ -100,18 +97,25 @@ export function useDictation(onFinal: (transcript: string) => void): Dictation {
         const text = finals.current.join(' ').trim();
         finals.current = [];
         setHeard('');
-        if (text) onFinalRef.current(text);
+        if (text) return onFinalRef.current(text);
+        if (failure) return onProblemRef.current?.(copy.voiceFailed(failure));
+        onFinalRef.current('');
       }),
     ];
     try {
       mod.start({
         lang: 'en-US',
         interimResults: true,
-        // Android ends a session on a short silence; continuous keeps going until "done".
-        continuous: true,
+        // The phone's own recognizer with its own mic, the same path as keyboard dictation.
+        // Continuous mode and forced on-device recognition make the library record the mic itself
+        // and pipe it in, which real phones reject with a "client" error. One utterance per tap,
+        // with a long silence allowance so people can think between items.
+        continuous: false,
         addsPunctuation: true,
-        requiresOnDeviceRecognition: local,
-        androidIntentOptions: { EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 4000 },
+        androidIntentOptions: {
+          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 4000,
+          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 4000,
+        },
       });
     } catch {
       cleanup();

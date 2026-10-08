@@ -157,7 +157,7 @@ export function CaptureBar({ onCapture, autoFocus }: { onCapture: (title: string
     const titles = splitSpoken(said);
     for (const t of titles) onCapture(t, 'voice');
     setNote(titles.length ? copy.voiceCaught(titles.length) : copy.voiceMissed);
-  });
+  }, setNote);
   const submit = () => {
     if (!text.trim()) return;
     onCapture(text);
