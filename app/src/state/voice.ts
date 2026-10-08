@@ -22,16 +22,6 @@ const mod: Mod | null = (() => {
 
 const NORMAL_ENDINGS = new Set(['no-speech', 'aborted', 'speech-timeout']);
 
-/** Prefer keeping audio on the phone. If the on-device model turns out to be missing, the next try goes online. */
-let onDeviceFailed = false;
-function onDevice(): boolean {
-  try {
-    return !onDeviceFailed && !!mod?.supportsOnDeviceRecognition();
-  } catch {
-    return false;
-  }
-}
-
 function recognizerReady(): boolean {
   try {
     return !!mod && mod.isRecognitionAvailable();
@@ -52,7 +42,7 @@ export type Dictation = {
 
 /**
  * Listens until the person stops talking (or taps again) and hands over the final
- * transcript once. Long pauses are allowed: people think while dumping.
+ * transcript once. One utterance per tap; a few seconds of silence ends it.
  */
 export function useDictation(onFinal: (transcript: string) => void, onProblem?: (note: string) => void): Dictation {
   const [available, setAvailable] = useState(recognizerReady);
@@ -64,7 +54,6 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
   onFinalRef.current = onFinal;
   const onProblemRef = useRef(onProblem);
   onProblemRef.current = onProblem;
-  const startRef = useRef<() => Promise<boolean>>(async () => false);
 
   const cleanup = useCallback(() => {
     for (const s of subs.current) s.remove();
@@ -87,15 +76,12 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
       return false;
     }
     cleanup();
-    const local = onDevice();
     finals.current = [];
     setHeard('');
     let failure: string | null = null;
-    let heardAnything = false;
     subs.current = [
       mod.addListener('result', (e) => {
         const text = e.results[0]?.transcript ?? '';
-        if (text) heardAnything = true;
         if (e.isFinal) finals.current.push(text);
         setHeard([...finals.current, e.isFinal ? '' : text].join(' ').trim());
       }),
@@ -103,9 +89,7 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
         // "no-speech" and "aborted" are normal endings, not failures.
         if (NORMAL_ENDINGS.has(e.error)) return;
         failure = e.error;
-        // The on-device model is missing or broken on plenty of phones; the online recognizer gets the next try.
-        if (local) onDeviceFailed = true;
-        else if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') setAvailable(false);
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') setAvailable(false);
       }),
       mod.addListener('end', () => {
         cleanup();
@@ -114,11 +98,7 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
         finals.current = [];
         setHeard('');
         if (text) return onFinalRef.current(text);
-        // On-device failed before hearing anything: retry online right away, so one tap still works.
-        if (failure && local) return void startRef.current();
         if (failure) return onProblemRef.current?.(copy.voiceFailed(failure));
-        // On-device that heard nothing at all may be a silent dud; the next tap goes online.
-        if (local && !heardAnything) onDeviceFailed = true;
         onFinalRef.current('');
       }),
     ];
@@ -126,11 +106,16 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
       mod.start({
         lang: 'en-US',
         interimResults: true,
-        // Android ends a session on a short silence; continuous keeps going until "done".
-        continuous: true,
+        // The phone's own recognizer with its own mic, the same path as keyboard dictation.
+        // Continuous mode and forced on-device recognition make the library record the mic itself
+        // and pipe it in, which real phones reject with a "client" error. One utterance per tap,
+        // with a long silence allowance so people can think between items.
+        continuous: false,
         addsPunctuation: true,
-        requiresOnDeviceRecognition: local,
-        androidIntentOptions: { EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 4000 },
+        androidIntentOptions: {
+          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 4000,
+          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 4000,
+        },
       });
     } catch {
       cleanup();
@@ -140,7 +125,6 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
     setListening(true);
     return true;
   }, [cleanup]);
-  startRef.current = start;
 
   const stop = useCallback(() => {
     try { mod?.stop(); } catch { setListening(false); }
