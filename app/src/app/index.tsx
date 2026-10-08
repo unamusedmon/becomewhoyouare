@@ -16,9 +16,12 @@ import { FrequencyCard, RecurrenceCard } from '../ui/RecurrenceCard';
 import { Screen, screenStyles } from '../ui/Screen';
 import { colors, fonts } from '../ui/theme';
 import { EvidenceCard, WaitingForCue } from '../ui/Waiting';
+import { isFresh } from '../domain/undo';
+import { Hint, useHint } from '../ui/Hint';
 
 export default function NowScreen() {
-  const { state, hydrated, dispatch } = useApp();
+  const { state, hydrated, dispatch, undo } = useApp();
+  const [planning, setPlanning] = useState(false);
   const [flash, setFlash] = useState<Flash | null>(null);
   const [aphorismHidden, setAphorismHidden] = useState(false);
   const [session, setSession] = useState<Routine[] | null>(null);
@@ -46,12 +49,22 @@ export default function NowScreen() {
     if (found) dispatch({ type: 'evidence_shown', key: found.key });
   }, [hydrated, state, evidence, dispatch]);
 
-  if (hydrated && !state.onboarding.completedAt) return <Redirect href="/onboarding" />;
-
   const at = new Date().toISOString();
   const now = pickNow(state, at);
   // Only what fits current energy; the rest is summarized by the "resting" line.
   const others = rankTasks(state.tasks, state.energy, at).filter((t) => t.id !== now.task?.id && !isWaitingOnCue(t));
+  const firstRun = !state.events.some((e) => e.type === 'first_step_done');
+
+  // One hint at a time, and only for what's on screen. The Undo bar and the plan editor get the stage to themselves.
+  const undoShowing = isFresh(undo, Date.now());
+  const hint = useHint(undoShowing || !state.onboarding.completedAt ? [] : planning ? ['plan'] : [
+    !!now.task && !state.energy && 'energy',
+    state.tasks.length > 0 && 'mic',
+    !!now.task && now.task.state === 'open' && !firstRun && 'rename',
+    others.length > 0 && 'also_here',
+  ]);
+
+  if (hydrated && !state.onboarding.completedAt) return <Redirect href="/onboarding" />;
   const waiting = state.tasks.filter((t) => isActive(t) && isWaitingOnCue(t) && t.id !== now.task?.id);
   const becoming = state.becomings.find((b) => b.status === 'active');
   const askFrequency =
@@ -63,6 +76,7 @@ export default function NowScreen() {
         {becoming ? <Text style={{ color: colors.muted, fontFamily: fonts.serif, fontStyle: 'italic', marginTop: -12 }}>becoming {becoming.statement}</Text> : null}
 
         <EnergyBar value={state.energy} onChange={(level) => dispatch({ type: 'set_energy', level })} />
+        {hint === 'energy' ? <Hint id="energy" /> : null}
         {state.energy === 'fried' ? <Text style={{ color: colors.accent, fontFamily: fonts.sans, fontSize: 14 }}>{copy.friedNote}</Text> : null}
 
         {askFrequency ? <FrequencyCard dispatch={dispatch} /> : null}
@@ -76,7 +90,9 @@ export default function NowScreen() {
             task={now.task}
             reason={now.reason}
             becomings={state.becomings}
-            showHint={!state.events.some((e) => e.type === 'first_step_done')}
+            showHint={firstRun}
+            hint={hint === 'plan' || hint === 'rename' ? hint : undefined}
+            onPlanning={setPlanning}
             tasks={state.tasks} dispatch={dispatch} onWin={onWin} />
         ) : (
           <View style={{ paddingVertical: 24, gap: 24 }}>
@@ -94,8 +110,10 @@ export default function NowScreen() {
 
         <WaitingForCue tasks={waiting} all={state.tasks} onFire={(taskId) => dispatch({ type: 'fire_intention', taskId })} />
 
+        {hint === 'mic' ? <Hint id="mic" caret="down" align="right" /> : null}
         <CaptureBar onCapture={(title, via) => dispatch({ type: 'capture', id: newId(), title, via })} />
 
+        {hint === 'also_here' ? <Hint id="also_here" caret="down" /> : null}
         <AlsoHere
           tasks={others}
           onPick={(taskId) => dispatch({ type: 'pin_now', taskId })}

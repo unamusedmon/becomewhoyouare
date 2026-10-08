@@ -11,6 +11,7 @@ import { requestNudgePermission } from '../state/nudgeSync';
 import { newId } from '../state/useAppState';
 import { s as shared } from '../ui/components';
 import { copy } from '../ui/copy';
+import { Hint, useHint } from '../ui/Hint';
 import { Screen, screenStyles } from '../ui/Screen';
 import { colors, fonts, space } from '../ui/theme';
 
@@ -38,12 +39,14 @@ export default function BecomingScreen() {
   const evidence = computeEvidence(state.tasks, state.events, new Date().toISOString());
   const anyAsked = state.routines.some((r) => r.recurrence.standing !== 'unasked');
   // Everything out of sight, newest first. Onboarding's "not now" lands here too, so nothing is ever lost.
+  const [hintsReset, setHintsReset] = useState(false);
   const released = [
     ...state.routines.filter((r) => r.status === 'released').map((r) => ({ key: `r:${r.id}`, title: r.title, tag: b.releasedTag, at: r.updatedAt, back: () => dispatch({ type: 'restore_routine', routineId: r.id }) })),
     ...state.tasks
       .filter((t) => (t.state === 'released' || t.state === 'resting') && !t.routineId)
       .map((t) => ({ key: t.id, title: t.title, tag: t.state === 'resting' ? b.restingTag : b.releasedTag, at: t.updatedAt, back: () => dispatch({ type: 'restore', taskId: t.id }) })),
   ].sort((x, y) => Date.parse(y.at) - Date.parse(x.at));
+  const hint = useHint([released.length > 0 && 'set_aside']);
 
   const addBecoming = () => {
     if (!statement.trim()) return;
@@ -145,6 +148,7 @@ export default function BecomingScreen() {
         ) : (
           <>
             <Text style={shared.faint}>{b.releasedNote}</Text>
+            {hint === 'set_aside' ? <Hint id="set_aside" caret="down" align="right" /> : null}
             {released.map((r) => (
               <View key={r.key} style={st.row}>
                 <View style={{ flex: 1 }}>
@@ -157,6 +161,22 @@ export default function BecomingScreen() {
           </>
         )}
       </View>
+
+      <View style={[st.row, st.setting]}>
+        <Text style={st.settingText}>{b.hintsSetting}</Text>
+        <Switch
+          value={state.hints.enabled}
+          onValueChange={(enabled) => dispatch({ type: 'set_hints', enabled })}
+          trackColor={{ true: colors.accent, false: colors.line }}
+          thumbColor={colors.ink}
+          accessibilityLabel={b.hintsSetting}
+        />
+      </View>
+      {state.hints.enabled && Object.keys(state.hints.seen).length > 0 ? (
+        <Text style={st.resetHints} onPress={() => { dispatch({ type: 'reset_hints' }); setHintsReset(true); }} accessibilityRole="button">
+          {hintsReset ? b.hintsResetDone : b.hintsReset}
+        </Text>
+      ) : hintsReset ? <Text style={st.resetHints}>{b.hintsResetDone}</Text> : null}
 
       <View style={[st.row, st.setting]}>
         <Text style={st.settingText}>{b.recurrenceSetting}</Text>
@@ -226,6 +246,7 @@ const st = StyleSheet.create({
   evidence: { color: colors.ink, fontFamily: fonts.serif, fontSize: 17, lineHeight: 25 },
   released: { color: colors.muted, fontFamily: fonts.serif, fontSize: 15, fontStyle: 'italic' },
   bringBack: { color: colors.accent, fontFamily: fonts.sans, fontSize: 14, paddingVertical: 8, paddingLeft: 12 },
+  resetHints: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, textDecorationLine: 'underline', marginTop: -space.sm },
   setting: { paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   settingText: { flex: 1, color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
 });

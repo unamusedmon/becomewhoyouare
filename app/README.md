@@ -53,6 +53,11 @@ aside is lost: Becoming lists everything let go or put off in onboarding, with "
 Tapping a task under "Also here" offers do this now, rename or let it go, and tapping the task
 name on the Now card renames it. The plan editor shows one kind of "when" at a time.
 
+Slice 8 adds hints, tooltips for a touch screen. Each is one line next to the thing it explains,
+shown once, at the moment that thing is on screen, and gone with a tap or by using the feature.
+Never more than one at a time, with a pause between them (`src/domain/hints.ts`). Becoming has a
+switch to turn them off and a link to show them all again.
+
 Quick add: a + button sits at the bottom right of the Now and Becoming screens and opens a
 one-field sheet (with the mic) that stays open for a burst of thoughts. On Android, long-pressing
 the app icon offers "Quick add" too. That shortcut is native (`plugins/withQuickAddShortcut.js`
