@@ -4,7 +4,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { HINT_GAP_MS, pickHint, type HintId } from '../domain/hints';
 import { useApp } from '../state/AppStateContext';
 import { copy } from './copy';
-import { colors, fonts, space } from './theme';
+import { colors, fonts, space, themed } from './theme';
 
 /**
  * The hint (if any) this screen should show, out of the ones that make sense on
@@ -60,7 +60,7 @@ export function Hint({ id, caret = 'up', align = 'left', onDismiss }: { id: Hint
   );
 }
 
-const st = StyleSheet.create({
+const st = themed(() => ({
   bubble: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1, borderLeftColor: colors.accent, borderLeftWidth: 2,
@@ -79,7 +79,7 @@ const st = StyleSheet.create({
   caretRight: { marginLeft: 0, alignSelf: 'flex-end', marginRight: 18 },
   caretUp: { marginBottom: -6, borderTopWidth: 1, borderLeftWidth: 1 },
   caretDown: { marginTop: -6, borderBottomWidth: 1, borderRightWidth: 1 },
-});
+}));
 
 /*
  * The (i): after a hint has been seen, a small button beside the feature brings

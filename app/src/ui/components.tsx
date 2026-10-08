@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, BackHandler, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, BackHandler, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import type { EnergyLevel, Task } from '../domain/model';
 import { splitSpoken } from '../domain/spoken';
@@ -8,14 +8,34 @@ import { useApp } from '../state/AppStateContext';
 import { InfoButton } from './Hint';
 import { type Dictation, useDictation } from '../state/voice';
 import { copy } from './copy';
-import { colors, fonts, space } from './theme';
+import { colors, fonts, space, themed } from './theme';
+
+/** A setting: its label on the left, a switch on the right. */
+export function Toggle({ label, value, onChange, disabled }: { label: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  // The web Switch colors its thumb separately when on; without this it's a stock teal.
+  const web = Platform.OS === 'web' ? { activeThumbColor: colors.ink } : {};
+  return (
+    <View style={s.toggle}>
+      <Text style={s.toggleText}>{label}</Text>
+      <Switch
+        value={value}
+        disabled={disabled}
+        onValueChange={onChange}
+        trackColor={{ true: colors.accent, false: colors.line }}
+        thumbColor={colors.ink}
+        accessibilityLabel={label}
+        {...web}
+      />
+    </View>
+  );
+}
 
 export function Button({ label, onPress, kind = 'quiet', wide }: { label: string; onPress: () => void; kind?: 'primary' | 'quiet'; wide?: boolean }) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      android_ripple={{ color: kind === 'primary' ? '#B8862E' : colors.line }}
+      android_ripple={{ color: kind === 'primary' ? colors.accentPressed : colors.line }}
       style={({ pressed }) => [kind === 'primary' ? s.primary : s.quiet, wide && s.wide, pressed && Platform.OS !== 'android' && { opacity: 0.7 }]}
     >
       <Text style={kind === 'primary' ? s.primaryText : s.quietText}>{label}</Text>
@@ -304,18 +324,20 @@ export function WinFlash({ flash }: { flash: Flash | null }) {
   );
 }
 
-export const s = StyleSheet.create({
+export const s = themed(() => ({
+  toggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space.md },
+  toggleText: { flex: 1, color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, alignItems: 'center' },
   label: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, letterSpacing: 0.3 },
   faint: { color: colors.faint, fontFamily: fonts.sans, fontSize: 13 },
   inlineLink: { color: colors.muted, textDecorationLine: 'underline' },
   chip: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  chipOn: { borderColor: colors.accent, backgroundColor: '#2A2214' },
+  chipOn: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   chipText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
   chipTextOn: { color: colors.accent },
   primary: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 22, paddingVertical: 13, overflow: 'hidden' },
   wide: { alignSelf: 'stretch', alignItems: 'center', paddingVertical: 16 },
-  primaryText: { color: '#17130A', fontFamily: fonts.sans, fontSize: 16, fontWeight: '600' },
+  primaryText: { color: colors.onAccent, fontFamily: fonts.sans, fontSize: 16, fontWeight: '600' },
   quiet: { paddingHorizontal: 10, paddingVertical: 13, borderRadius: 10, overflow: 'hidden' },
   quietText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 15 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
@@ -327,11 +349,11 @@ export const s = StyleSheet.create({
   addBtn: { width: 46, height: 46, borderRadius: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   addText: { color: colors.accent, fontSize: 24, lineHeight: 26 },
   micOn: { backgroundColor: colors.accent, borderColor: colors.accent, overflow: 'hidden' },
-  micRing: { backgroundColor: '#F0C46A' },
+  micRing: { backgroundColor: colors.mic },
   listItem: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, gap: 2 },
   listItemOpen: { backgroundColor: colors.surface, marginHorizontal: -space.sm, paddingHorizontal: space.sm, borderRadius: 10 },
   listTitle: { color: colors.ink, fontFamily: fonts.sans, fontSize: 15 },
-  flash: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,14,13,0.82)' },
+  flash: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.scrimStrong },
   flashText: { color: colors.win, fontFamily: fonts.serif, fontSize: 56 },
   flashSub: { color: colors.ink, fontFamily: fonts.serif, fontSize: 18, marginTop: space.sm, fontStyle: 'italic' },
-});
+}));

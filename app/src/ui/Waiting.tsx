@@ -5,7 +5,7 @@ import type { Task } from '../domain/model';
 import type { Evidence } from '../domain/overcoming';
 import { Button, s as shared } from './components';
 import { copy } from './copy';
-import { colors, fonts, space } from './theme';
+import { colors, fonts, space, themed } from './theme';
 
 /** Planned tasks waiting on their cue. An event cue gets an "it's now" for when it happens. */
 export function WaitingForCue({ tasks, all, onFire }: { tasks: Task[]; all: Task[]; onFire: (id: string) => void }) {
@@ -49,7 +49,7 @@ export function EvidenceCard({ evidence, onNoted }: { evidence: Evidence; onNote
   );
 }
 
-const st = StyleSheet.create({
+const st = themed(() => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   cue: { color: colors.ink, fontFamily: fonts.serif, fontSize: 16, fontStyle: 'italic' },
   now: { borderWidth: 1, borderColor: colors.accent, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, overflow: 'hidden' },
@@ -57,4 +57,4 @@ const st = StyleSheet.create({
   evidence: { borderLeftWidth: 2, borderLeftColor: colors.win, paddingLeft: space.md, gap: space.sm },
   evidenceTitle: { color: colors.win, fontFamily: fonts.serif, fontSize: 20 },
   evidenceBody: { color: colors.ink, fontFamily: fonts.serif, fontSize: 17, lineHeight: 25 },
-});
+}));

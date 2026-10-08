@@ -64,9 +64,49 @@ one-field sheet (with the mic) that stays open for a burst of thoughts. On Andro
 the app icon offers "Quick add" too. That shortcut is native (`plugins/withQuickAddShortcut.js`
 opens `becomewhoyouare://add`), so it appears in development and release builds, not in Expo Go.
 
-Everything is stored on the device (AsyncStorage). The one exception is speech: the app asks
+Settings has its own page (link at the bottom of Becoming): sync, the optional Org file,
+light mode, hints, routine check-ins, notifications and the first-step test. Dark is the
+default; light mode is opt-in and stays on the device that chose it.
+
+Everything is stored on the device (AsyncStorage) unless you turn on sync. The one exception is speech: the app asks
 Android for on-device recognition when the phone supports it, and otherwise the phone's speech
 service (usually Google's) may process the audio online. The app itself keeps no recordings.
+
+## Web version and sync
+
+The same app runs in a browser. Build it once, then serve it on your own computer:
+
+```bash
+npm run web:build     # writes dist/
+npm run web:serve     # http://localhost:8787
+```
+
+**Sync** goes through a WebDAV folder you already have (Nextcloud, Fastmail, rclone serve,
+any WebDAV server). Turn it on in Settings on each device with the same folder, username and an
+app password. The app writes `become-who-you-are.json` there, merges the other devices' changes on
+start, on return to the app, every few minutes, and about 15 seconds after you change something.
+Whatever was changed most recently wins per task, routine and becoming; history is never lost
+because events are merged, not replaced. The password stays on the device and is never synced.
+Rules: `src/domain/sync.ts`; transport: `src/state/webdav.ts`, `src/state/sync.ts`.
+
+Browsers can't talk to most WebDAV servers directly (CORS), so `web:serve` also relays those
+requests at `/__dav`. It listens on 127.0.0.1 only and needs a header other websites can't send.
+Set `DAV_ALLOW=cloud.example.com` to limit where it may forward. The Android app talks to the
+server directly.
+
+**Org-mode** is off until you turn it on (Settings, needs sync). Then the app also writes
+`become-who-you-are.org` beside the data file, with sections for Becoming, Tasks, Routines,
+Set aside and Done (finished and let-go tasks stay for 14 days). In Emacs or Orgzly you can:
+
+- change a keyword: `TODO` open, `NEXT` started, `WAITING` set aside, `DONE`, `CANCELLED` let go
+- retitle a heading or rewrite its `FIRST_STEP` property
+- add a heading under Tasks, Becoming or Routines (`:CADENCE: daily` etc. for routines)
+
+The next sync on a device with Org turned on picks those up. Deleting a heading does nothing
+(mark it `CANCELLED`), and a `DONE` can't be turned back into `TODO` from Org. The
+`#+BWYA_SYNCED` line says which sync wrote the file; edits to an older copy are ignored so they
+can never undo newer work, so keep the file open in Emacs with auto-revert on.
+Rules: `src/domain/org.ts`.
 
 ## Not yet
 

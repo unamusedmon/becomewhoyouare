@@ -7,7 +7,7 @@ import { useApp } from '../state/AppStateContext';
 import { newId } from '../state/useAppState';
 import { CaptureBar } from '../ui/components';
 import { copy } from '../ui/copy';
-import { colors, fonts, space } from '../ui/theme';
+import { colors, fonts, space, themed } from '../ui/theme';
 
 /**
  * Quick add: one field, from anywhere, then straight back to what you were doing.
@@ -39,8 +39,8 @@ export default function QuickAdd() {
   );
 }
 
-const st = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,14,13,0.6)' },
+const st = themed(() => ({
+  root: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderColor: colors.line,
     padding: space.md, gap: space.sm, width: '100%', maxWidth: 640, alignSelf: 'center',
@@ -48,4 +48,4 @@ const st = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   title: { color: colors.ink, fontFamily: fonts.serif, fontSize: 20 },
   done: { color: colors.muted, fontFamily: fonts.sans, fontSize: 15, padding: space.xs },
-});
+}));

@@ -1,20 +1,19 @@
+import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { timeOfDay } from '../domain/intention';
 import type { LooseCadence } from '../domain/model';
-import { firstStepTestProgress, firstStepTestResult } from '../domain/experiment';
+import { firstStepTestResult } from '../domain/experiment';
 import { aboutDuration, computeEvidence } from '../domain/overcoming';
 import { affirmedShare, CADENCE_ORDER } from '../domain/recurrence';
 import { MAX_BECOMINGS } from '../domain/reducer';
 import { useApp } from '../state/AppStateContext';
-import { requestNudgePermission } from '../state/nudgeSync';
 import { newId } from '../state/useAppState';
 import { s as shared } from '../ui/components';
 import { copy } from '../ui/copy';
 import { HintSpot, InfoButton, useHint } from '../ui/Hint';
 import { Screen, screenStyles } from '../ui/Screen';
-import { colors, fonts, space } from '../ui/theme';
+import { colors, fonts, space, themed } from '../ui/theme';
 
 const b = copy.becoming;
 
@@ -24,22 +23,12 @@ export default function BecomingScreen() {
   const [statement, setStatement] = useState('');
   const [routineTitle, setRoutineTitle] = useState('');
   const [cadence, setCadence] = useState<LooseCadence>('weekly');
-  const [denied, setDenied] = useState(false);
-
-  const setNudges = async (enabled: boolean) => {
-    if (!enabled) return dispatch({ type: 'set_nudges', patch: { enabled: false } });
-    const granted = await requestNudgePermission().catch(() => false);
-    setDenied(!granted);
-    if (granted) dispatch({ type: 'set_nudges', patch: { enabled: true } });
-  };
-  const hhmm = (t: string) => { const [h, m] = t.split(':').map(Number); return timeOfDay(new Date(2026, 0, 1, h, m).toISOString()); };
 
   const active = state.becomings.filter((x) => x.status === 'active');
   const routines = state.routines.filter((r) => r.status === 'active');
   const share = affirmedShare(state.routines);
   const evidence = computeEvidence(state.tasks, state.events, new Date().toISOString());
   const test = firstStepTestResult(state.events, state.tasks);
-  const testProgress = firstStepTestProgress(state.events);
   const testLine = test
     ? aboutDuration(test.withStep.medianSec) === aboutDuration(test.withoutStep.medianSec)
       ? b.testSame(test.withStep.n, test.withoutStep.n)
@@ -47,7 +36,6 @@ export default function BecomingScreen() {
     : undefined;
   const anyAsked = state.routines.some((r) => r.recurrence.standing !== 'unasked');
   // Everything out of sight, newest first. Onboarding's "not now" lands here too, so nothing is ever lost.
-  const [hintsReset, setHintsReset] = useState(false);
   const released = [
     ...state.routines.filter((r) => r.status === 'released').map((r) => ({ key: `r:${r.id}`, title: r.title, tag: b.releasedTag, at: r.updatedAt, back: () => dispatch({ type: 'restore_routine', routineId: r.id }) })),
     ...state.tasks
@@ -174,91 +162,12 @@ export default function BecomingScreen() {
         )}
       </View>
 
-      <View style={[st.row, st.setting]}>
-        <Text style={st.settingText}>{b.hintsSetting}</Text>
-        <Switch
-          value={state.hints.enabled}
-          onValueChange={(enabled) => dispatch({ type: 'set_hints', enabled })}
-          trackColor={{ true: colors.accent, false: colors.line }}
-          thumbColor={colors.ink}
-          accessibilityLabel={b.hintsSetting}
-        />
-      </View>
-      {state.hints.enabled && Object.keys(state.hints.seen).length > 0 ? (
-        <Text style={st.resetHints} onPress={() => { dispatch({ type: 'reset_hints' }); setHintsReset(true); }} accessibilityRole="button">
-          {hintsReset ? b.hintsResetDone : b.hintsReset}
-        </Text>
-      ) : hintsReset ? <Text style={st.resetHints}>{b.hintsResetDone}</Text> : null}
-
-      <View style={st.section}>
-        <View style={st.row}>
-          <Text style={st.settingText}>{b.testSetting}</Text>
-          <Switch
-            value={state.experiments.firstStepTest}
-            onValueChange={(enabled) => dispatch({ type: 'set_first_step_test', enabled })}
-            trackColor={{ true: colors.accent, false: colors.line }}
-            thumbColor={colors.ink}
-            accessibilityLabel={b.testSetting}
-          />
-        </View>
-        {state.experiments.firstStepTest ? (
-          <Text style={shared.faint}>{b.testNote} {!test ? b.testProgress(testProgress.started, testProgress.needed) : ''}</Text>
-        ) : null}
-      </View>
-
-      <View style={[st.row, st.setting]}>
-        <Text style={st.settingText}>{b.recurrenceSetting}</Text>
-        <Switch
-          value={state.recurrence.enabled}
-          onValueChange={(enabled) => dispatch({ type: 'set_recurrence_enabled', enabled })}
-          trackColor={{ true: colors.accent, false: colors.line }}
-          thumbColor={colors.ink}
-          accessibilityLabel={b.recurrenceSetting}
-        />
-      </View>
-
-      {Platform.OS !== 'web' ? (
-        <View style={st.section}>
-          <View style={st.row}>
-            <Text style={st.settingText}>{b.nudgesSetting}</Text>
-            <Switch
-              value={state.nudges.enabled}
-              onValueChange={(v) => { setNudges(v); }}
-              trackColor={{ true: colors.accent, false: colors.line }}
-              thumbColor={colors.ink}
-              accessibilityLabel={b.nudgesSetting}
-            />
-          </View>
-          <Text style={shared.faint}>{denied ? b.nudgesDenied : b.nudgesNote}</Text>
-          {state.nudges.enabled ? (
-            <>
-              <Text style={st.settingText}>{b.dailyLabel}</Text>
-              <View style={shared.row}>
-                {[undefined, ...b.dailyTimes].map((t) => {
-                  const on = state.nudges.dailyAt === t;
-                  return (
-                    <Pressable
-                      key={t ?? 'off'}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: on }}
-                      onPress={() => dispatch({ type: 'set_nudges', patch: { dailyAt: t } })}
-                      android_ripple={{ color: colors.line }}
-                      style={[shared.chip, on && shared.chipOn]}
-                    >
-                      <Text style={[shared.chipText, on && shared.chipTextOn]}>{t ? hhmm(t) : b.dailyOff}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </>
-          ) : null}
-        </View>
-      ) : null}
+      <Link href="/settings" style={st.settingsLink} accessibilityRole="link">{copy.settings.link}</Link>
     </Screen>
   );
 }
 
-const st = StyleSheet.create({
+const st = themed(() => ({
   section: { gap: space.md },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space.md },
   statement: { flex: 1, color: colors.ink, fontFamily: fonts.serif, fontSize: 20, fontStyle: 'italic' },
@@ -275,7 +184,5 @@ const st = StyleSheet.create({
   released: { color: colors.muted, fontFamily: fonts.serif, fontSize: 15, fontStyle: 'italic' },
   bringBack: { color: colors.accent, fontFamily: fonts.sans, fontSize: 14, paddingVertical: 8, paddingLeft: 12 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  resetHints: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, textDecorationLine: 'underline', marginTop: -space.sm },
-  setting: { paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  settingText: { flex: 1, color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
-});
+  settingsLink: { color: colors.muted, fontFamily: fonts.sans, fontSize: 15, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+}));

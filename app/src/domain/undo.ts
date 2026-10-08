@@ -33,7 +33,7 @@ const LABELS: Partial<Record<Action['type'], string>> = {
  * slot; anything else the person does replaces it, so undo never erases newer work.
  */
 export function track(slot: UndoSlot | undefined, action: Action, before: AppState, after: AppState): UndoSlot | undefined {
-  if (action.type === 'tick' || action.type === 'open' || action.type === 'backgrounded' || action.type === 'evidence_shown' || action.type === 'hint_seen') return slot;
+  if (action.type === 'tick' || action.type === 'open' || action.type === 'backgrounded' || action.type === 'sync_merge' || action.type === 'evidence_shown' || action.type === 'hint_seen') return slot;
   if (after === before) return slot;
   // Onboarding's choices are a batch the person reviews on screen; a lone "Undo" for the last one would confuse.
   if (!before.onboarding.completedAt) return undefined;

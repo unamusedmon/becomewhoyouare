@@ -34,7 +34,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "tsx --test 'src/**/*.test.ts'",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "web:build": "expo export --platform web --output-dir dist",
+    "web:serve": "node scripts/serve-web.mjs"
   },
   "private": true
 }
