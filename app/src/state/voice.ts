@@ -6,6 +6,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { copy } from '../ui/copy';
+
 type Mod = typeof import('expo-speech-recognition').ExpoSpeechRecognitionModule;
 type Sub = { remove(): void };
 
@@ -17,6 +19,8 @@ const mod: Mod | null = (() => {
     return null;
   }
 })();
+
+const NORMAL_ENDINGS = new Set(['no-speech', 'aborted', 'speech-timeout']);
 
 /** Prefer keeping audio on the phone. If the on-device model turns out to be missing, the next try goes online. */
 let onDeviceFailed = false;
@@ -50,7 +54,7 @@ export type Dictation = {
  * Listens until the person stops talking (or taps again) and hands over the final
  * transcript once. Long pauses are allowed: people think while dumping.
  */
-export function useDictation(onFinal: (transcript: string) => void): Dictation {
+export function useDictation(onFinal: (transcript: string) => void, onProblem?: (note: string) => void): Dictation {
   const [available, setAvailable] = useState(recognizerReady);
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState('');
@@ -58,6 +62,9 @@ export function useDictation(onFinal: (transcript: string) => void): Dictation {
   const subs = useRef<Sub[]>([]);
   const onFinalRef = useRef(onFinal);
   onFinalRef.current = onFinal;
+  const onProblemRef = useRef(onProblem);
+  onProblemRef.current = onProblem;
+  const startRef = useRef<() => Promise<boolean>>(async () => false);
 
   const cleanup = useCallback(() => {
     for (const s of subs.current) s.remove();
@@ -83,15 +90,21 @@ export function useDictation(onFinal: (transcript: string) => void): Dictation {
     const local = onDevice();
     finals.current = [];
     setHeard('');
+    let failure: string | null = null;
+    let heardAnything = false;
     subs.current = [
       mod.addListener('result', (e) => {
         const text = e.results[0]?.transcript ?? '';
+        if (text) heardAnything = true;
         if (e.isFinal) finals.current.push(text);
         setHeard([...finals.current, e.isFinal ? '' : text].join(' ').trim());
       }),
       mod.addListener('error', (e) => {
         // "no-speech" and "aborted" are normal endings, not failures.
-        if (local && e.error === 'language-not-supported') onDeviceFailed = true;
+        if (NORMAL_ENDINGS.has(e.error)) return;
+        failure = e.error;
+        // The on-device model is missing or broken on plenty of phones; the online recognizer gets the next try.
+        if (local) onDeviceFailed = true;
         else if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') setAvailable(false);
       }),
       mod.addListener('end', () => {
@@ -100,7 +113,13 @@ export function useDictation(onFinal: (transcript: string) => void): Dictation {
         const text = finals.current.join(' ').trim();
         finals.current = [];
         setHeard('');
-        if (text) onFinalRef.current(text);
+        if (text) return onFinalRef.current(text);
+        // On-device failed before hearing anything: retry online right away, so one tap still works.
+        if (failure && local) return void startRef.current();
+        if (failure) return onProblemRef.current?.(copy.voiceFailed(failure));
+        // On-device that heard nothing at all may be a silent dud; the next tap goes online.
+        if (local && !heardAnything) onDeviceFailed = true;
+        onFinalRef.current('');
       }),
     ];
     try {
@@ -121,6 +140,7 @@ export function useDictation(onFinal: (transcript: string) => void): Dictation {
     setListening(true);
     return true;
   }, [cleanup]);
+  startRef.current = start;
 
   const stop = useCallback(() => {
     try { mod?.stop(); } catch { setListening(false); }
