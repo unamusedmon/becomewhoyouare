@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { AppState as RNAppState } from 'react-native';
 
 import type { AppState } from '../domain/reducer';
+import type { UndoSlot } from '../domain/undo';
 import { useNudgeSync } from './nudgeSync';
 import { useAppState, type Dispatch } from './useAppState';
 
@@ -9,6 +10,8 @@ interface Ctx {
   state: AppState;
   hydrated: boolean;
   dispatch: Dispatch;
+  undo?: UndoSlot;
+  undoLast: () => void;
 }
 
 const AppStateContext = createContext<Ctx | null>(null);

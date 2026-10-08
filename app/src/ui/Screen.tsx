@@ -13,7 +13,7 @@ export function Screen({ children, nav }: { children: ReactNode; nav?: { href: '
     <View style={st.root}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
         <ScrollView
-          contentContainerStyle={[st.scroll, { paddingTop: insets.top + space.lg, paddingBottom: insets.bottom + space.xl }]}
+          contentContainerStyle={[st.scroll, { paddingTop: insets.top + space.lg, paddingBottom: insets.bottom + space.xl + 56 }]}
           keyboardShouldPersistTaps="handled"
         >
           {nav ? (

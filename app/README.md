@@ -47,6 +47,12 @@ on a bare "and"). `src/state/voice.ts` wraps `expo-speech-recognition`. That mod
 the in-app mic needs a development build (`npx expo run:android` or an EAS build); in Expo Go the
 mic button focuses the field and points you at the keyboard's own mic instead.
 
+Slice 7 is a friendliness pass. Taps that are easy to regret (done, let it go, not now, I did
+it, stop here, rename) show an Undo bar for seven seconds (`src/domain/undo.ts`). Nothing set
+aside is lost: Becoming lists everything let go or put off in onboarding, with "bring back".
+Tapping a task under "Also here" offers do this now, rename or let it go, and tapping the task
+name on the Now card renames it. The plan editor shows one kind of "when" at a time.
+
 Everything is stored on the device (AsyncStorage). The one exception is speech: the app asks
 Android for on-device recognition when the phone supports it, and otherwise the phone's speech
 service (usually Google's) may process the audio online. The app itself keeps no recordings.

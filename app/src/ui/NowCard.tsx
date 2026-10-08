@@ -5,7 +5,7 @@ import { RESHAPE_DEPTH } from '../domain/firstStep';
 import { intentionSentence, obstacleSentence } from '../domain/intention';
 import type { Becoming, Task } from '../domain/model';
 import type { Dispatch } from '../state/useAppState';
-import { Button, s as shared, useBackToClose } from './components';
+import { Button, RenameField, s as shared, useBackToClose } from './components';
 import { completionLine, copy } from './copy';
 import { clockLabel } from '../domain/duration';
 import { PlanEditor } from './PlanEditor';
@@ -28,6 +28,7 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
   const [justStarted, setJustStarted] = useState(false);
   const [editing, setEditing] = useState(false);
   const [planning, setPlanning] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(task.firstStep.text);
 
   // Start latency is measured from the moment this card first shows the task.
@@ -39,6 +40,7 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
     setJustStarted(false);
     setEditing(false);
     setPlanning(false);
+    setRenaming(false);
   }, [task.id]);
 
   const closeEditors = useCallback(() => { setEditing(false); setPlanning(false); }, []);
@@ -53,6 +55,15 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
 
   if (planning) {
     return <PlanEditor task={task} tasks={tasks} dispatch={dispatch} onDone={(saved) => { setPlanning(false); if (saved) onWin(copy.plan.saved); }} />;
+  }
+
+  if (renaming) {
+    return (
+      <View style={st.card}>
+        <Text style={shared.label}>{copy.rename}</Text>
+        <RenameField title={task.title} onCancel={() => setRenaming(false)} onSave={(t) => { dispatch({ type: 'rename', taskId: id, title: t }); setRenaming(false); }} />
+      </View>
+    );
   }
 
   if (editing) {
@@ -130,7 +141,7 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
       {/* Read top to bottom: what this is for, the one thing to do, the one button to press. */}
       <View style={{ gap: 2 }}>
         {fired ? <Text style={[shared.label, { color: colors.accent }]}>{copy.plan.firedHeader}</Text> : null}
-        <Text style={st.task} numberOfLines={2}>{task.title}</Text>
+        <Text style={st.task} numberOfLines={2} onPress={() => setRenaming(true)} accessibilityRole="button" accessibilityHint={copy.renameHint}>{task.title}</Text>
         <Text style={shared.faint}>{meta}</Text>
       </View>
       <View style={st.divider} />

@@ -37,10 +37,13 @@ export default function BecomingScreen() {
   const share = affirmedShare(state.routines);
   const evidence = computeEvidence(state.tasks, state.events, new Date().toISOString());
   const anyAsked = state.routines.some((r) => r.recurrence.standing !== 'unasked');
+  // Everything out of sight, newest first. Onboarding's "not now" lands here too, so nothing is ever lost.
   const released = [
-    ...state.routines.filter((r) => r.status === 'released').map((r) => ({ id: r.id, title: r.title })),
-    ...state.tasks.filter((t) => t.state === 'released' && !t.routineId).map((t) => ({ id: t.id, title: t.title })),
-  ];
+    ...state.routines.filter((r) => r.status === 'released').map((r) => ({ key: `r:${r.id}`, title: r.title, tag: b.releasedTag, at: r.updatedAt, back: () => dispatch({ type: 'restore_routine', routineId: r.id }) })),
+    ...state.tasks
+      .filter((t) => (t.state === 'released' || t.state === 'resting') && !t.routineId)
+      .map((t) => ({ key: t.id, title: t.title, tag: t.state === 'resting' ? b.restingTag : b.releasedTag, at: t.updatedAt, back: () => dispatch({ type: 'restore', taskId: t.id }) })),
+  ].sort((x, y) => Date.parse(y.at) - Date.parse(x.at));
 
   const addBecoming = () => {
     if (!statement.trim()) return;
@@ -142,7 +145,15 @@ export default function BecomingScreen() {
         ) : (
           <>
             <Text style={shared.faint}>{b.releasedNote}</Text>
-            {released.map((r) => <Text key={r.id} style={st.released}>{r.title}</Text>)}
+            {released.map((r) => (
+              <View key={r.key} style={st.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.released}>{r.title}</Text>
+                  <Text style={shared.faint}>{r.tag}</Text>
+                </View>
+                <Text style={st.bringBack} onPress={r.back} accessibilityRole="button" accessibilityLabel={`${b.bringBack}: ${r.title}`}>{b.bringBack}</Text>
+              </View>
+            ))}
           </>
         )}
       </View>
@@ -214,6 +225,7 @@ const st = StyleSheet.create({
   routineTitle: { color: colors.ink, fontFamily: fonts.sans, fontSize: 16 },
   evidence: { color: colors.ink, fontFamily: fonts.serif, fontSize: 17, lineHeight: 25 },
   released: { color: colors.muted, fontFamily: fonts.serif, fontSize: 15, fontStyle: 'italic' },
+  bringBack: { color: colors.accent, fontFamily: fonts.sans, fontSize: 14, paddingVertical: 8, paddingLeft: 12 },
   setting: { paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   settingText: { flex: 1, color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
 });

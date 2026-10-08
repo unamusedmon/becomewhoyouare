@@ -76,7 +76,7 @@ export interface Task {
 export type TaskEventType =
   | 'created' | 'opened' | 'first_step_done' | 'completed'
   | 'slipped' | 'shrunk' | 'released' | 'alternative_shown' | 'step_edited'
-  | 'intention_set' | 'intention_fired';
+  | 'intention_set' | 'intention_fired' | 'restored' | 'renamed';
 
 export interface TaskEvent {
   id: ID;

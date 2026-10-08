@@ -96,7 +96,12 @@ export default function NowScreen() {
 
         <CaptureBar onCapture={(title, via) => dispatch({ type: 'capture', id: newId(), title, via })} />
 
-        <AlsoHere tasks={others} onPick={(taskId) => dispatch({ type: 'pin_now', taskId })} />
+        <AlsoHere
+          tasks={others}
+          onPick={(taskId) => dispatch({ type: 'pin_now', taskId })}
+          onRename={(taskId, title) => dispatch({ type: 'rename', taskId, title })}
+          onRelease={(taskId) => dispatch({ type: 'release', taskId })}
+        />
       </Screen>
       <WinFlash flash={flash} />
     </View>

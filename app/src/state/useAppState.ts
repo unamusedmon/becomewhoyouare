@@ -2,15 +2,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 
 import { initialState, migrate, reducer, type Action, type AppState } from '../domain/reducer';
+import { track, type UndoSlot } from '../domain/undo';
 
 const STORAGE_KEY = 'bwya/state/v1';
 
-type Internal = { app: AppState; hydrated: boolean };
-type InternalAction = Action | { type: 'hydrate'; state: AppState | null };
+type Internal = { app: AppState; hydrated: boolean; undo?: UndoSlot };
+type InternalAction = Action | { type: 'hydrate'; state: AppState | null } | { type: 'undo' };
 
 function internalReducer(s: Internal, a: InternalAction): Internal {
   if (a.type === 'hydrate') return { app: a.state ?? s.app, hydrated: true };
-  return { ...s, app: reducer(s.app, a) };
+  if (a.type === 'undo') return s.undo ? { ...s, app: s.undo.before, undo: undefined } : s;
+  const app = reducer(s.app, a);
+  return { ...s, app, undo: track(s.undo, a, s.app, app) };
 }
 
 /** Distributes Omit over the union so each action keeps its own fields. */
@@ -22,7 +25,7 @@ export function newId(): string {
 }
 
 /** App state, persisted on device. Nothing leaves the phone in this slice. */
-export function useAppState(): { state: AppState; hydrated: boolean; dispatch: Dispatch } {
+export function useAppState(): { state: AppState; hydrated: boolean; dispatch: Dispatch; undo?: UndoSlot; undoLast: () => void } {
   const [s, rawDispatch] = useReducer(internalReducer, { app: initialState, hydrated: false });
 
   useEffect(() => {
@@ -54,5 +57,7 @@ export function useAppState(): { state: AppState; hydrated: boolean; dispatch: D
     [],
   );
 
-  return { state: s.app, hydrated: s.hydrated, dispatch };
+  const undoLast = useCallback(() => rawDispatch({ type: 'undo' }), []);
+
+  return { state: s.app, hydrated: s.hydrated, dispatch, undo: s.undo, undoLast };
 }

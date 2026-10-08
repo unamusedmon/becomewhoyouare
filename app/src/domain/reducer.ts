@@ -83,6 +83,11 @@ export type Action =
   | { type: 'set_energy'; at: ISODateTime; level: EnergyLevel | undefined }
   /** Onboarding's "not now": out of sight, fully retrievable. */
   | { type: 'rest'; at: ISODateTime; taskId: ID }
+  /** Brings a set-aside or let-go task back to the list. */
+  | { type: 'restore'; at: ISODateTime; taskId: ID }
+  | { type: 'restore_routine'; at: ISODateTime; routineId: ID }
+  /** Fixes a title (a typo, a misheard word). A first step the person wrote themselves is kept. */
+  | { type: 'rename'; at: ISODateTime; taskId: ID; title: string }
   | { type: 'complete_onboarding'; at: ISODateTime }
   | { type: 'add_becoming'; at: ISODateTime; id: ID; statement: string }
   | { type: 'edit_becoming'; at: ISODateTime; id: ID; statement: string }
@@ -315,6 +320,43 @@ export function reducer(state: AppState, action: Action): AppState {
           action.taskId,
         ),
       };
+
+    case 'restore': {
+      const task = state.tasks.find((t) => t.id === action.taskId);
+      if (!task || (task.state !== 'resting' && task.state !== 'released')) return state;
+      return {
+        ...state,
+        // A routine's own task stays tied to it; bringing it back revives the routine too.
+        routines: task.routineId
+          ? state.routines.map((r) => (r.id === task.routineId && r.status === 'released' ? { ...r, status: 'active', updatedAt: at } : r))
+          : state.routines,
+        tasks: updateTask(state, task.id, at, (t) => ({ ...t, state: 'open', openedAt: undefined, slipPromptPending: false })),
+        events: logEvent(state, task.id, 'restored', at, { from: task.state }),
+      };
+    }
+
+    case 'restore_routine':
+      return {
+        ...state,
+        routines: state.routines.map((r) => (r.id === action.routineId && r.status === 'released' ? { ...r, status: 'active', updatedAt: at } : r)),
+      };
+
+    case 'rename': {
+      const task = state.tasks.find((t) => t.id === action.taskId);
+      const clean = action.title.trim().replace(/\s+/g, ' ');
+      if (!task || !clean || clean === task.title) return state;
+      const fresh = createTask(task.id, clean, at, state.profile);
+      return {
+        ...state,
+        tasks: updateTask(state, task.id, at, (t) => ({
+          ...t,
+          title: clean,
+          firstStep: t.firstStep.source === 'user' ? t.firstStep : fresh.firstStep,
+          ...(t.energySource === 'inferred' ? { energy: fresh.energy, duration: fresh.duration } : {}),
+        })),
+        events: logEvent(state, task.id, 'renamed', at),
+      };
+    }
 
     case 'complete_onboarding':
       return { ...state, onboarding: { ...state.onboarding, completedAt: state.onboarding.completedAt ?? at } };
