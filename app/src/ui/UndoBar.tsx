@@ -6,7 +6,7 @@ import { isFresh, UNDO_MS } from '../domain/undo';
 import { useApp } from '../state/AppStateContext';
 import { copy } from './copy';
 import { HintSpot, InfoButton, useHint } from './Hint';
-import { colors, fonts, space } from './theme';
+import { colors, fonts, space, themed } from './theme';
 
 /** A quiet bar at the bottom after a tap that's easy to regret. Gone on its own. */
 export function UndoBar() {
@@ -37,7 +37,7 @@ export function UndoBar() {
   );
 }
 
-const st = StyleSheet.create({
+const st = themed(() => ({
   wrap: { position: 'absolute', left: space.md, right: space.md, alignItems: 'center', gap: space.xs },
   hint: { maxWidth: 480, width: '100%' },
   bar: {
@@ -48,4 +48,4 @@ const st = StyleSheet.create({
   text: { flex: 1, color: colors.ink, fontFamily: fonts.sans, fontSize: 15 },
   btn: { paddingHorizontal: space.md, paddingVertical: 10 },
   btnText: { color: colors.accent, fontFamily: fonts.sans, fontSize: 15, fontWeight: '600' },
-});
+}));

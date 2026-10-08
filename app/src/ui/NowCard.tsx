@@ -10,7 +10,7 @@ import { completionLine, copy } from './copy';
 import { clockLabel } from '../domain/duration';
 import { HintSpot, InfoButton } from './Hint';
 import { PlanEditor } from './PlanEditor';
-import { colors, fonts, space } from './theme';
+import { colors, fonts, space, themed } from './theme';
 
 interface Props {
   task: Task;
@@ -184,7 +184,7 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
   );
 }
 
-const st = StyleSheet.create({
+const st = themed(() => ({
   card: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: space.lg, gap: space.md },
   step: { color: colors.ink, fontFamily: fonts.serif, fontSize: 30, lineHeight: 38 },
   task: { color: colors.ink, fontFamily: fonts.sans, fontSize: 17, lineHeight: 23, opacity: 0.9 },
@@ -197,4 +197,4 @@ const st = StyleSheet.create({
   body: { color: colors.ink, fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, opacity: 0.85 },
   stall: { color: colors.muted, fontFamily: fonts.serif, fontSize: 15, lineHeight: 21, fontStyle: 'italic' },
   link: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, textDecorationLine: 'underline' },
-});
+}));

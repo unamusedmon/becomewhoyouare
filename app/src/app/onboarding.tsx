@@ -9,7 +9,7 @@ import { useDictation } from '../state/voice';
 import { Button, MicButton, s as shared, useBackToClose, useMic } from '../ui/components';
 import { copy } from '../ui/copy';
 import { Screen, screenStyles } from '../ui/Screen';
-import { colors, fonts, space } from '../ui/theme';
+import { colors, fonts, space, themed } from '../ui/theme';
 
 const o = copy.onboarding;
 
@@ -210,7 +210,7 @@ export default function Onboarding() {
   );
 }
 
-const st = StyleSheet.create({
+const st = themed(() => ({
   block: { gap: space.lg },
   talk: { flexDirection: 'row', alignItems: 'center', gap: space.md, alignSelf: 'flex-start' },
   talkText: { color: colors.ink, fontFamily: fonts.sans, fontSize: 16 },
@@ -225,4 +225,4 @@ const st = StyleSheet.create({
   example: { color: colors.muted, fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 16, paddingVertical: 4 },
   lionRow: { gap: space.sm, paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   lionTitle: { color: colors.ink, fontFamily: fonts.sans, fontSize: 17 },
-});
+}));

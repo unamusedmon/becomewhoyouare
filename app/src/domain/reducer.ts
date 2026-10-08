@@ -14,6 +14,7 @@ import type {
   RecurrenceFollowUp, RecurrenceSettings, RecurrenceVerdict, Routine, Task, TaskEvent, TaskEventType, UserProfile,
 } from './model';
 import { armFor, holdoutStep } from './experiment';
+import { mergeStates } from './sync';
 import { applyAnswer, completedToday, isRoutineDue, localDay, looserCadence, newRoutine } from './recurrence';
 
 export const SLIP_PROMPT_AFTER = 3;
@@ -36,6 +37,8 @@ export interface AppState {
   hints: HintSettings;
   /** Self-experiments the person opted into. */
   experiments: { firstStepTest: boolean };
+  /** Last time anything changed. When two devices disagree on a setting, the later one wins. */
+  changedAt?: ISODateTime;
 }
 
 export const MAX_BECOMINGS = 3;
@@ -131,12 +134,16 @@ export type Action =
   | { type: 'set_hints'; at: ISODateTime; enabled: boolean }
   /** "Show hints again": forget which ones were seen. */
   | { type: 'reset_hints'; at: ISODateTime }
-  | { type: 'set_first_step_test'; at: ISODateTime; enabled: boolean };
+  | { type: 'set_first_step_test'; at: ISODateTime; enabled: boolean }
+  /** Another device's state, merged in (see sync.ts). */
+  | { type: 'sync_merge'; at: ISODateTime; remote: AppState };
 
 let eventSeq = 0;
+/** Differs per app run, so two synced devices can't mint the same event id in the same millisecond. */
+const RUN_TAG = Math.random().toString(36).slice(2, 6);
 function eventId(at: ISODateTime): ID {
   eventSeq = (eventSeq + 1) % 1_000_000;
-  return `${Date.parse(at).toString(36)}-${eventSeq.toString(36)}`;
+  return `${Date.parse(at).toString(36)}-${eventSeq.toString(36)}-${RUN_TAG}`;
 }
 
 function logEvent(state: AppState, taskId: ID, type: TaskEventType, at: ISODateTime, meta?: Record<string, unknown>): TaskEvent[] {
@@ -181,9 +188,12 @@ const HINT_USED: Partial<Record<Action['type'], HintId>> = {
 };
 
 export function reducer(state: AppState, action: Action): AppState {
+  if (action.type === 'sync_merge') return mergeStates(state, action.remote);
   const next = step(state, action);
+  if (next === state) return state;
   const used = action.type === 'capture' && action.via === 'voice' ? 'mic' : HINT_USED[action.type];
-  return used && next !== state ? { ...next, hints: markSeen(next.hints, used, action.at) } : next;
+  const stamped = { ...next, changedAt: action.at };
+  return used ? { ...stamped, hints: markSeen(stamped.hints, used, action.at) } : stamped;
 }
 
 function step(state: AppState, action: Action): AppState {
@@ -435,17 +445,17 @@ function step(state: AppState, action: Action): AppState {
       const statement = action.statement.trim();
       const active = state.becomings.filter((b) => b.status === 'active');
       if (!statement || active.length >= MAX_BECOMINGS) return state;
-      return { ...state, becomings: [...state.becomings, { id: action.id, createdAt: at, statement, status: 'active' }] };
+      return { ...state, becomings: [...state.becomings, { id: action.id, createdAt: at, updatedAt: at, statement, status: 'active' }] };
     }
 
     case 'edit_becoming': {
       const statement = action.statement.trim();
       if (!statement) return state;
-      return { ...state, becomings: state.becomings.map((b) => (b.id === action.id ? { ...b, statement } : b)) };
+      return { ...state, becomings: state.becomings.map((b) => (b.id === action.id ? { ...b, statement, updatedAt: at } : b)) };
     }
 
     case 'outgrow_becoming':
-      return { ...state, becomings: state.becomings.map((b) => (b.id === action.id ? { ...b, status: 'outgrown' } : b)) };
+      return { ...state, becomings: state.becomings.map((b) => (b.id === action.id ? { ...b, status: 'outgrown', updatedAt: at } : b)) };
 
     case 'link_task_becoming':
       return {
@@ -640,6 +650,9 @@ function step(state: AppState, action: Action): AppState {
 
     case 'set_hints':
       return { ...state, hints: { ...state.hints, enabled: action.enabled } };
+
+    case 'sync_merge':
+      return mergeStates(state, action.remote);
 
     case 'set_first_step_test':
       return { ...state, experiments: { ...state.experiments, firstStepTest: action.enabled } };

@@ -4,6 +4,8 @@ import { AppState as RNAppState } from 'react-native';
 import type { AppState } from '../domain/reducer';
 import type { UndoSlot } from '../domain/undo';
 import { useNudgeSync } from './nudgeSync';
+import { useSync, type SyncControls } from './sync';
+import { useThemeMode, type ThemeControls } from './theme';
 import { useAppState, type Dispatch } from './useAppState';
 
 interface Ctx {
@@ -12,6 +14,9 @@ interface Ctx {
   dispatch: Dispatch;
   undo?: UndoSlot;
   undoLast: () => void;
+  sync: SyncControls;
+  /** Changing it re-renders every screen, and themed styles rebuild for the new palette. */
+  theme: ThemeControls;
 }
 
 const AppStateContext = createContext<Ctx | null>(null);
@@ -20,9 +25,12 @@ const TICK_MS = 60_000;
 
 /** Holds app state for every screen, and keeps routines spawning their tasks on time. */
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const value = useAppState();
-  const { state, hydrated, dispatch } = value;
+  const theme = useThemeMode();
+  const app = useAppState();
+  const { state, hydrated, dispatch } = app;
   useNudgeSync(state, hydrated, dispatch);
+  const sync = useSync(state, hydrated, dispatch);
+  const value = { ...app, sync, theme };
 
   useEffect(() => {
     if (!hydrated) return;

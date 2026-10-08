@@ -107,6 +107,8 @@ export interface UserProfile {
 export interface Becoming {
   id: ID;
   createdAt: ISODateTime;
+  /** Missing on becomings saved before sync existed; createdAt stands in. */
+  updatedAt?: ISODateTime;
   statement: string;
   status: 'active' | 'resting' | 'outgrown';
 }

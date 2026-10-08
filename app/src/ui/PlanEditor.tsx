@@ -10,7 +10,7 @@ import type { Dispatch } from '../state/useAppState';
 import { Button, s as shared } from './components';
 import { copy } from './copy';
 import { HintSpot, InfoButton } from './Hint';
-import { colors, fonts, space } from './theme';
+import { colors, fonts, space, themed } from './theme';
 
 const p = copy.plan;
 
@@ -209,7 +209,7 @@ function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () 
   );
 }
 
-const st = StyleSheet.create({
+const st = themed(() => ({
   card: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: space.lg, gap: space.md },
   title: { color: colors.ink, fontFamily: fonts.serif, fontSize: 24, lineHeight: 30 },
   body: { color: colors.ink, fontFamily: fonts.sans, fontSize: 15, lineHeight: 22, opacity: 0.85 },
@@ -227,4 +227,4 @@ const st = StyleSheet.create({
   tabText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },
   tabTextOn: { color: colors.ink },
   link: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, textDecorationLine: 'underline' },
-});
+}));

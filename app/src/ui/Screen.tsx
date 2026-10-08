@@ -6,10 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isFresh } from '../domain/undo';
 import { useApp } from '../state/AppStateContext';
 import { copy } from './copy';
-import { colors, fonts, space } from './theme';
+import { colors, fonts, space, themed } from './theme';
 
 /** Shared page frame: dark, one column, readable width on web. */
-export function Screen({ children, nav }: { children: ReactNode; nav?: { href: '/' | '/becoming'; label: string } }) {
+export function Screen({ children, nav }: { children: ReactNode; nav?: { href: '/' | '/becoming' | '/settings'; label: string } }) {
   // Android draws edge to edge (SDK 54+), so the status bar, gesture bar and keyboard are ours to avoid.
   const insets = useSafeAreaInsets();
   const { undo } = useApp();
@@ -47,14 +47,14 @@ export function Screen({ children, nav }: { children: ReactNode; nav?: { href: '
   );
 }
 
-export const screenStyles = StyleSheet.create({
+export const screenStyles = themed(() => ({
   h1: { color: colors.ink, fontFamily: fonts.serif, fontSize: 30, lineHeight: 38 },
   h2: { color: colors.ink, fontFamily: fonts.serif, fontSize: 22, lineHeight: 29 },
   body: { color: colors.ink, fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, opacity: 0.85 },
   aphorism: { color: colors.muted, fontFamily: fonts.serif, fontSize: 16, fontStyle: 'italic', lineHeight: 23, marginBottom: space.xs },
-});
+}));
 
-const st = StyleSheet.create({
+const st = themed(() => ({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: space.md, gap: space.lg, maxWidth: 640, width: '100%', alignSelf: 'center' },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
@@ -68,4 +68,4 @@ const st = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
   },
   fabText: { color: colors.accent, fontSize: 30, lineHeight: 32, fontWeight: '500' },
-});
+}));

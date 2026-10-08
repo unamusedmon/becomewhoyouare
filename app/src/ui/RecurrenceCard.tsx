@@ -7,7 +7,7 @@ import type { AppState } from '../domain/reducer';
 import { newId, type Dispatch } from '../state/useAppState';
 import { Button, s as shared } from './components';
 import { copy } from './copy';
-import { colors, fonts, space } from './theme';
+import { colors, fonts, space, themed } from './theme';
 
 type Phase = 'ask' | 'no' | 'unsure' | 'reshape' | 'link' | 'note' | 'mostly_no';
 
@@ -233,8 +233,8 @@ export function FrequencyCard({ dispatch }: { dispatch: Dispatch }) {
   );
 }
 
-const st = StyleSheet.create({
-  card: { borderRadius: 16, borderWidth: 1, borderColor: colors.accent, padding: space.lg, gap: space.md, backgroundColor: '#17140F' },
+const st = themed(() => ({
+  card: { borderRadius: 16, borderWidth: 1, borderColor: colors.accent, padding: space.lg, gap: space.md, backgroundColor: colors.accentCard },
   head: { flexDirection: 'row', justifyContent: 'space-between' },
   close: { color: colors.faint, fontFamily: fonts.sans, fontSize: 13 },
   q: { color: colors.ink, fontFamily: fonts.serif, fontSize: 18, lineHeight: 26, fontStyle: 'italic', opacity: 0.9 },
@@ -242,4 +242,4 @@ const st = StyleSheet.create({
   menu: { gap: space.xs, alignItems: 'flex-start' },
   link: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, textDecorationLine: 'underline' },
   input: { color: colors.ink, fontFamily: fonts.serif, fontSize: 22, borderBottomWidth: 1, borderBottomColor: colors.accent, paddingVertical: space.xs },
-});
+}));
