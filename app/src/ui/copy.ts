@@ -13,6 +13,7 @@ export const copy = {
   change: 'change',
   undo: 'Undo',
   hintDismiss: 'got it',
+  hintInfo: "What's this?",
   hints: {
     energy: 'Your answer decides which tasks show up. Low force means only the light ones.',
     mic: 'Tap the mic and say several things at once. Each becomes its own task.',

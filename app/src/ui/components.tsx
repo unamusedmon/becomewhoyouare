@@ -5,6 +5,7 @@ import { Animated, BackHandler, Platform, Pressable, StyleSheet, Text, TextInput
 import type { EnergyLevel, Task } from '../domain/model';
 import { splitSpoken } from '../domain/spoken';
 import { useApp } from '../state/AppStateContext';
+import { InfoButton } from './Hint';
 import { type Dictation, useDictation } from '../state/voice';
 import { copy } from './copy';
 import { colors, fonts, space } from './theme';
@@ -41,15 +42,21 @@ export function EnergyBar({ value, onChange }: { value?: EnergyLevel; onChange: 
   // Once answered, the question shrinks to one quiet line so the task gets the attention.
   if (value && !open) {
     return (
-      <Text style={s.faint}>
-        {copy.energyNow(copy.energyLabels[value])}{'  '}
-        <Text style={s.inlineLink} onPress={() => setOpen(true)} accessibilityRole="button">{copy.change}</Text>
-      </Text>
+      <View style={s.labelRow}>
+        <Text style={s.faint}>
+          {copy.energyNow(copy.energyLabels[value])}{'  '}
+          <Text style={s.inlineLink} onPress={() => setOpen(true)} accessibilityRole="button">{copy.change}</Text>
+        </Text>
+        <InfoButton id="energy" />
+      </View>
     );
   }
   return (
     <View style={{ gap: space.sm }}>
-      <Text style={s.label}>{copy.energyQuestion}</Text>
+      <View style={s.labelRow}>
+        <Text style={s.label}>{copy.energyQuestion}</Text>
+        <InfoButton id="energy" />
+      </View>
       <View style={s.row}>
         {LEVELS.map((lvl) => {
           const on = value === lvl;
@@ -166,7 +173,10 @@ export function CaptureBar({ onCapture }: { onCapture: (title: string, via?: 'vo
           <MicButton listening={dictation.listening} onPress={mic} />
         )}
       </View>
-      <Text style={[s.faint, { minHeight: 16 }]}>{note ?? (dictation.listening ? copy.voiceTapToStop : ' ')}</Text>
+      <View style={s.labelRow}>
+        <Text style={[s.faint, { minHeight: 16, flex: 1 }]}>{note ?? (dictation.listening ? copy.voiceTapToStop : ' ')}</Text>
+        <InfoButton id="mic" />
+      </View>
     </View>
   );
 }
@@ -242,7 +252,10 @@ export function AlsoHere({ tasks, onPick, onRename, onRelease }: {
   if (!tasks.length) return null;
   return (
     <View style={{ gap: space.sm }}>
-      <Text style={s.label}>{copy.alsoHere}</Text>
+      <View style={s.labelRow}>
+        <Text style={s.label}>{copy.alsoHere}</Text>
+        <InfoButton id="also_here" />
+      </View>
       {tasks.map((t) => (
         <TaskRow
           key={t.id}
@@ -301,6 +314,7 @@ export const s = StyleSheet.create({
   primaryText: { color: '#17130A', fontFamily: fonts.sans, fontSize: 16, fontWeight: '600' },
   quiet: { paddingHorizontal: 10, paddingVertical: 13, borderRadius: 10, overflow: 'hidden' },
   quietText: { color: colors.muted, fontFamily: fonts.sans, fontSize: 15 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   captureRow: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
   captureInput: {
     flex: 1, color: colors.ink, fontFamily: fonts.sans, fontSize: 16, backgroundColor: colors.surface,

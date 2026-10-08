@@ -17,7 +17,7 @@ import { Screen, screenStyles } from '../ui/Screen';
 import { colors, fonts } from '../ui/theme';
 import { EvidenceCard, WaitingForCue } from '../ui/Waiting';
 import { isFresh } from '../domain/undo';
-import { Hint, useHint } from '../ui/Hint';
+import { HintSpot, useHint } from '../ui/Hint';
 
 export default function NowScreen() {
   const { state, hydrated, dispatch, undo } = useApp();
@@ -76,7 +76,7 @@ export default function NowScreen() {
         {becoming ? <Text style={{ color: colors.muted, fontFamily: fonts.serif, fontStyle: 'italic', marginTop: -12 }}>becoming {becoming.statement}</Text> : null}
 
         <EnergyBar value={state.energy} onChange={(level) => dispatch({ type: 'set_energy', level })} />
-        {hint === 'energy' ? <Hint id="energy" /> : null}
+        <HintSpot id="energy" auto={hint} />
         {state.energy === 'fried' ? <Text style={{ color: colors.accent, fontFamily: fonts.sans, fontSize: 14 }}>{copy.friedNote}</Text> : null}
 
         {askFrequency ? <FrequencyCard dispatch={dispatch} /> : null}
@@ -110,10 +110,10 @@ export default function NowScreen() {
 
         <WaitingForCue tasks={waiting} all={state.tasks} onFire={(taskId) => dispatch({ type: 'fire_intention', taskId })} />
 
-        {hint === 'mic' ? <Hint id="mic" caret="down" align="right" /> : null}
+        <HintSpot id="mic" auto={hint} caret="down" align="right" />
         <CaptureBar onCapture={(title, via) => dispatch({ type: 'capture', id: newId(), title, via })} />
 
-        {hint === 'also_here' ? <Hint id="also_here" caret="down" /> : null}
+        <HintSpot id="also_here" auto={hint} caret="down" />
         <AlsoHere
           tasks={others}
           onPick={(taskId) => dispatch({ type: 'pin_now', taskId })}
