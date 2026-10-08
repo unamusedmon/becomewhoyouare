@@ -2,6 +2,7 @@
  * All state changes, as a pure reducer. Every action carries its own timestamp
  * so the reducer stays deterministic and testable.
  */
+import { initialHints, markSeen, type HintId, type HintSettings } from './hints';
 import { inferEnergy, categorize } from './classify';
 import { defaultRawMinutes, estimateDuration } from './duration';
 import { cleanCue, settleIntention } from './intention';
@@ -30,6 +31,7 @@ export interface AppState {
   onboarding: OnboardingState;
   overcoming: OvercomingSettings;
   nudges: NudgeSettings;
+  hints: HintSettings;
 }
 
 export const MAX_BECOMINGS = 3;
@@ -51,6 +53,7 @@ export const initialState: AppState = {
   overcoming: { lastShownAt: {} },
   // Off until asked for. Six a day at most (docs/design/05, §12).
   nudges: { enabled: false, maxPerDay: 6 },
+  hints: initialHints,
 };
 
 /** Fills fields added after a state was saved, so older saves keep working. */
@@ -63,6 +66,7 @@ export function migrate(saved: Partial<AppState> & { version: 1 }): AppState {
     onboarding: { ...initialState.onboarding, ...saved.onboarding },
     overcoming: { ...initialState.overcoming, ...saved.overcoming },
     nudges: { ...initialState.nudges, ...saved.nudges },
+    hints: { ...initialState.hints, ...saved.hints, seen: { ...saved.hints?.seen } },
   };
 }
 
@@ -113,7 +117,12 @@ export type Action =
   /** "It's happening": the cue the person planned around just occurred. */
   | { type: 'fire_intention'; at: ISODateTime; taskId: ID }
   | { type: 'evidence_shown'; at: ISODateTime; key: string }
-  | { type: 'set_nudges'; at: ISODateTime; patch: Partial<NudgeSettings> };
+  | { type: 'set_nudges'; at: ISODateTime; patch: Partial<NudgeSettings> }
+  /** Dismissed, or the person just used the thing it explains. */
+  | { type: 'hint_seen'; at: ISODateTime; id: HintId }
+  | { type: 'set_hints'; at: ISODateTime; enabled: boolean }
+  /** "Show hints again": forget which ones were seen. */
+  | { type: 'reset_hints'; at: ISODateTime };
 
 let eventSeq = 0;
 function eventId(at: ISODateTime): ID {
@@ -152,7 +161,23 @@ export function createTask(id: ID, title: string, at: ISODateTime, profile: User
   };
 }
 
+/** Using a feature is the best sign its hint isn't needed. */
+const HINT_USED: Partial<Record<Action['type'], HintId>> = {
+  set_energy: 'energy',
+  rename: 'rename',
+  pin_now: 'also_here',
+  set_intention: 'plan',
+  restore: 'set_aside',
+  restore_routine: 'set_aside',
+};
+
 export function reducer(state: AppState, action: Action): AppState {
+  const next = step(state, action);
+  const used = action.type === 'capture' && action.via === 'voice' ? 'mic' : HINT_USED[action.type];
+  return used && next !== state ? { ...next, hints: markSeen(next.hints, used, action.at) } : next;
+}
+
+function step(state: AppState, action: Action): AppState {
   const { at } = action;
   switch (action.type) {
     case 'capture': {
@@ -555,6 +580,17 @@ export function reducer(state: AppState, action: Action): AppState {
         events: logEvent(state, task.id, 'intention_fired', at),
       };
     }
+
+    case 'hint_seen': {
+      const hints = markSeen(state.hints, action.id, at);
+      return hints === state.hints ? state : { ...state, hints };
+    }
+
+    case 'set_hints':
+      return { ...state, hints: { ...state.hints, enabled: action.enabled } };
+
+    case 'reset_hints':
+      return { ...state, hints: { enabled: true, seen: {} } };
 
     case 'set_nudges': {
       const patch = { ...action.patch };

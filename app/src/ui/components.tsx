@@ -4,6 +4,7 @@ import { Animated, BackHandler, Platform, Pressable, StyleSheet, Text, TextInput
 
 import type { EnergyLevel, Task } from '../domain/model';
 import { splitSpoken } from '../domain/spoken';
+import { useApp } from '../state/AppStateContext';
 import { type Dictation, useDictation } from '../state/voice';
 import { copy } from './copy';
 import { colors, fonts, space } from './theme';
@@ -139,7 +140,9 @@ export function CaptureBar({ onCapture }: { onCapture: (title: string, via?: 'vo
     setText('');
     setNote(copy.captured);
   };
-  const mic = useMic(dictation, input, setNote);
+  const micTap = useMic(dictation, input, setNote);
+  const { dispatch } = useApp();
+  const mic = () => { dispatch({ type: 'hint_seen', id: 'mic' }); return micTap(); };
   return (
     <View style={{ gap: space.xs }}>
       <View style={s.captureRow}>

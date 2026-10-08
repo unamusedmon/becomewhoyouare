@@ -8,6 +8,7 @@ import type { Dispatch } from '../state/useAppState';
 import { Button, RenameField, s as shared, useBackToClose } from './components';
 import { completionLine, copy } from './copy';
 import { clockLabel } from '../domain/duration';
+import { Hint } from './Hint';
 import { PlanEditor } from './PlanEditor';
 import { colors, fonts, space } from './theme';
 
@@ -21,10 +22,13 @@ interface Props {
   tasks: Task[];
   dispatch: Dispatch;
   onWin: (text: string, sub?: string) => void;
+  /** A one-time hint to show on the card, picked by the screen. */
+  hint?: 'plan' | 'rename';
+  onPlanning?: (open: boolean) => void;
 }
 
 /** The heart of the app: one task, shown as its first physical step. */
-export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, onWin }: Props) {
+export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, onWin, hint, onPlanning }: Props) {
   const [justStarted, setJustStarted] = useState(false);
   const [editing, setEditing] = useState(false);
   const [planning, setPlanning] = useState(false);
@@ -43,6 +47,9 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
     setRenaming(false);
   }, [task.id]);
 
+  useEffect(() => { onPlanning?.(planning); }, [planning, onPlanning]);
+  useEffect(() => () => onPlanning?.(false), [onPlanning]);
+
   const closeEditors = useCallback(() => { setEditing(false); setPlanning(false); }, []);
   useBackToClose(editing || planning, closeEditors);
 
@@ -54,7 +61,7 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
   const meta = [task.duration.experiential.label, feeds ? copy.feeds(feeds.statement) : fired ? undefined : reason].filter(Boolean).join(' · ');
 
   if (planning) {
-    return <PlanEditor task={task} tasks={tasks} dispatch={dispatch} onDone={(saved) => { setPlanning(false); if (saved) onWin(copy.plan.saved); }} />;
+    return <PlanEditor task={task} tasks={tasks} dispatch={dispatch} showHint={hint === 'plan'} onDone={(saved) => { setPlanning(false); if (saved) onWin(copy.plan.saved); }} />;
   }
 
   if (renaming) {
@@ -143,6 +150,7 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
         {fired ? <Text style={[shared.label, { color: colors.accent }]}>{copy.plan.firedHeader}</Text> : null}
         <Text style={st.task} numberOfLines={2} onPress={() => setRenaming(true)} accessibilityRole="button" accessibilityHint={copy.renameHint}>{task.title}</Text>
         <Text style={shared.faint}>{meta}</Text>
+        {hint === 'rename' ? <View style={{ marginTop: space.sm }}><Hint id="rename" /></View> : null}
       </View>
       <View style={st.divider} />
       <View style={{ gap: space.xs }}>
