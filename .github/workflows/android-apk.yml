@@ -44,6 +44,17 @@ jobs:
       - run: npx expo prebuild --platform android --no-install
         env:
           CI: 1
+      # Install the NDK up front: Gradle's on-demand download has no retry and once
+      # left a truncated zip ("Archive is not a ZIP archive"). sdkmanager verifies it.
+      - name: Install NDK
+        run: |
+          ndk=$(sed -n 's/^ndkVersion *= *"\(.*\)"/\1/p' node_modules/react-native/gradle/libs.versions.toml)
+          echo "NDK $ndk"
+          for i in 1 2 3; do
+            (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ndk" > /dev/null && break
+            sleep $((i * 10))
+          done
+          test -f "$ANDROID_HOME/ndk/$ndk/source.properties"
       - name: Build release APK
         working-directory: app/android
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
