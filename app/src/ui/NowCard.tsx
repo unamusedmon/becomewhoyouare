@@ -157,7 +157,7 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
       </View>
       <View style={st.divider} />
       <View style={{ gap: space.xs }}>
-        <Text style={st.stepLabel}>{copy.firstStepLabel}</Text>
+        <Text style={st.stepLabel}>{task.firstStep.source === 'holdout' ? copy.holdoutLabel : copy.firstStepLabel}</Text>
         <Text style={st.step} accessibilityRole="header">{task.firstStep.text}</Text>
       </View>
       {showHint ? <Text style={st.hint}>{copy.firstStepHint}</Text> : null}

@@ -59,6 +59,24 @@ test('the question is off until opted in, and only offered after the day\'s firs
   assert.equal(shouldOfferSession(s, later), false, 'once a day');
 });
 
+test('after a session that rode a win, the next one comes at a neutral moment instead', () => {
+  let s = withRoutines('Morning pages', 'Stretch', 'Journal', 'A walk');
+  const d1 = day(NEW_ROUTINE_GRACE_DAYS);
+  s = run(s, d1, { type: 'capture', id: 'x', title: 'Text Sam back' }, { type: 'complete', taskId: 'x' }, { type: 'start_recurrence_session' });
+  assert.equal(s.recurrence.lastSessionMoment, 'win');
+  const d2 = day(NEW_ROUTINE_GRACE_DAYS + 1);
+  assert.equal(shouldOfferSession(s, d2), true, 'neutral: no win yet today');
+  s = run(s, d2, { type: 'set_energy', level: 'low' });
+  assert.equal(shouldOfferSession(s, d2), false, 'a low day is not neutral');
+  s = run(s, d2, { type: 'set_energy', level: 'medium' }, { type: 'capture', id: 'y', title: 'Text Ana back' }, { type: 'complete', taskId: 'y' });
+  assert.equal(shouldOfferSession(s, d2), false, 'already won today: wait for a neutral moment');
+  const d3 = day(NEW_ROUTINE_GRACE_DAYS + 2);
+  s = run(s, d3, { type: 'start_recurrence_session' });
+  assert.equal(s.recurrence.lastSessionMoment, 'neutral');
+  const d4 = day(NEW_ROUTINE_GRACE_DAYS + 3);
+  assert.equal(shouldOfferSession(s, d4), false, 'and then back to riding a win');
+});
+
 test('yes answers are spaced 7, 21, then 60 days apart', () => {
   let s = withRoutines('Morning pages');
   let at = day(NEW_ROUTINE_GRACE_DAYS);

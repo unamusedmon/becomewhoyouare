@@ -11,7 +11,10 @@ const DAY = 86_400_000;
 /** Start latency: last two weeks against the eleven weeks before. */
 export const RECENT_DAYS = 14;
 export const BASELINE_DAYS = 90;
-export const MIN_SAMPLES = 5;
+/** Medians of five swing on one odd day. Eight per side is still small, so the other guards matter too. */
+export const MIN_SAMPLES = 8;
+/** A drop must already have been there a few days ago too, so one lucky stretch can't produce it. */
+export const PERSIST_DAYS = 3;
 /** Recent median must be at most 3/4 of the baseline median, and at least a minute faster. */
 export const MAX_RATIO = 0.75;
 export const MIN_DROP_SEC = 60;
@@ -64,6 +67,9 @@ export function aboutDuration(sec: number): string {
 
 interface Start { at: number; latencySec: number; category: Category }
 
+/** Shown, never started, then let go. If these rise, a falling median may only mean the hard ones left. */
+interface Dropout { at: number; category: Category }
+
 function starts(events: TaskEvent[], tasks: Task[]): Start[] {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const out: Start[] = [];
@@ -77,25 +83,60 @@ function starts(events: TaskEvent[], tasks: Task[]): Start[] {
   return out;
 }
 
-function latencyEvidence(all: Start[], now: number): Evidence[] {
+function dropouts(events: TaskEvent[], tasks: Task[]): Dropout[] {
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const shown = new Set<string>();
+  const started = new Set<string>();
+  const out: Dropout[] = [];
+  for (const e of events) {
+    if (e.type === 'opened') shown.add(e.taskId);
+    if (e.type === 'first_step_done') started.add(e.taskId);
+    const task = byId.get(e.taskId);
+    if (e.type === 'released' && task && shown.has(e.taskId) && !started.has(e.taskId)) {
+      out.push({ at: Date.parse(e.at), category: categorize(task.title) });
+    }
+  }
+  return out;
+}
+
+interface Drop { group: Category | 'all'; baseline: number; current: number; samples: number }
+
+function latencyDrops(all: Start[], gone: Dropout[], now: number): Drop[] {
   const recentFrom = now - RECENT_DAYS * DAY;
   const baselineFrom = now - BASELINE_DAYS * DAY;
-  const out: Evidence[] = [];
+  const inRecent = (at: number) => at > recentFrom && at <= now;
+  const inBaseline = (at: number) => at > baselineFrom && at <= recentFrom;
+  const out: Drop[] = [];
   for (const g of Object.keys(PHRASE) as (Category | 'all')[]) {
     const mine = g === 'all' ? all : all.filter((s) => s.category === g);
-    const recent = mine.filter((s) => s.at > recentFrom && s.at <= now).map((s) => s.latencySec);
-    const baseline = mine.filter((s) => s.at > baselineFrom && s.at <= recentFrom).map((s) => s.latencySec);
+    const recent = mine.filter((s) => inRecent(s.at)).map((s) => s.latencySec);
+    const baseline = mine.filter((s) => inBaseline(s.at)).map((s) => s.latencySec);
     if (recent.length < MIN_SAMPLES || baseline.length < MIN_SAMPLES) continue;
     const b = median(baseline);
     const c = median(recent);
     if (c > b * MAX_RATIO || b - c < MIN_DROP_SEC) continue;
     // Same rounded words on both sides isn't a change a person would recognize.
     if (aboutDuration(b) === aboutDuration(c)) continue;
+    // Survivorship: if more shown tasks were dropped unstarted lately, the faster median may be selection, not change.
+    const mineGone = g === 'all' ? gone : gone.filter((d) => d.category === g);
+    const share = (dropped: number, startedN: number) => dropped / (dropped + startedN);
+    if (share(mineGone.filter((d) => inRecent(d.at)).length, recent.length) >
+        share(mineGone.filter((d) => inBaseline(d.at)).length, baseline.length)) continue;
+    out.push({ group: g, baseline: b, current: c, samples: recent.length + baseline.length });
+  }
+  return out;
+}
+
+function latencyEvidence(all: Start[], gone: Dropout[], now: number): Evidence[] {
+  const earlier = new Set(latencyDrops(all, gone, now - PERSIST_DAYS * DAY).map((d) => d.group));
+  const out: Evidence[] = [];
+  for (const { group: g, baseline: b, current: c, samples } of latencyDrops(all, gone, now)) {
+    if (!earlier.has(g)) continue;
     out.push({
       key: `start_latency_drop:${g}`,
       kind: 'start_latency_drop',
       headline: `It used to take you ${aboutDuration(b)} to start ${PHRASE[g]!.start}. These last two weeks: ${aboutDuration(c)}.`,
-      sampleSize: recent.length + baseline.length,
+      sampleSize: samples,
       baseline: b,
       current: c,
     });
@@ -143,7 +184,7 @@ export function computeEvidence(tasks: Task[], events: TaskEvent[], at: ISODateT
   if (!events.length) return [];
   const now = Date.parse(at);
   const all = starts(events, tasks);
-  let latency = latencyEvidence(all, now);
+  let latency = latencyEvidence(all, dropouts(events, tasks), now);
   // When one kind of task is the whole story, "things" just repeats it in vaguer words.
   const same = (a: Evidence, b: Evidence) =>
     aboutDuration(a.baseline) === aboutDuration(b.baseline) && aboutDuration(a.current) === aboutDuration(b.current);

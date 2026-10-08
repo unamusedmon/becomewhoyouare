@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { cleanCue, CUE_SUGGESTIONS, intentionSentence, parseClock, timePresets } from '../domain/intention';
+import { cleanCue, CUE_SUGGESTIONS, intentionSentence, obstacleSentence, parseClock, timePresets } from '../domain/intention';
 import type { IntentionTrigger, Task } from '../domain/model';
 import { isActive } from '../domain/planner';
 import { useApp } from '../state/AppStateContext';
@@ -33,6 +33,8 @@ export function PlanEditor({ task, tasks, dispatch, onDone, showHint }: { task: 
   const [extras, setExtras] = useState(!!i?.context || !!i?.ifObstacle);
   const [obstacle, setObstacle] = useState(i?.ifObstacle?.obstacle ?? '');
   const [response, setResponse] = useState(i?.ifObstacle?.response ?? '');
+  // After saving: the plan read back once. Rehearsing an if-then plan strengthens it (Sheeran et al., 2024).
+  const [readBack, setReadBack] = useState<string[] | null>(null);
 
   const anchors = tasks.filter((t) => isActive(t) && t.id !== task.id).slice(0, 4);
   const trigger: IntentionTrigger | undefined =
@@ -51,15 +53,23 @@ export function PlanEditor({ task, tasks, dispatch, onDone, showHint }: { task: 
       const granted = await requestNudgePermission().catch(() => false);
       if (granted) dispatch({ type: 'set_nudges', patch: { enabled: true } });
     }
-    dispatch({
-      type: 'set_intention',
-      taskId: task.id,
-      trigger,
-      context: where,
-      ifObstacle: stall ? { obstacle, response } : undefined,
-    });
-    onDone(true);
+    const ifObstacle = stall && obstacle.trim() && response.trim() ? { obstacle, response } : undefined;
+    dispatch({ type: 'set_intention', taskId: task.id, trigger, context: where, ifObstacle });
+    const lines = [preview, ifObstacle ? obstacleSentence({ trigger, setAt: '', ifObstacle }) : undefined];
+    setReadBack(lines.filter((l): l is string => !!l));
   };
+
+  if (readBack) {
+    return (
+      <View style={st.card}>
+        <Text style={st.title}>{p.readBackTitle}</Text>
+        {readBack.map((line) => <Text key={line} style={st.readBack}>{line}</Text>)}
+        <View style={shared.row}>
+          <Button kind="primary" label={p.readBackDone} onPress={() => onDone(true)} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={st.card}>
@@ -209,6 +219,7 @@ const st = StyleSheet.create({
     color: colors.ink, fontFamily: fonts.sans, fontSize: 16, backgroundColor: colors.bg,
     borderRadius: 10, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 11,
   },
+  readBack: { color: colors.ink, fontFamily: fonts.serif, fontSize: 20, lineHeight: 28 },
   preview: { color: colors.accent, fontFamily: fonts.serif, fontSize: 18, lineHeight: 25, fontStyle: 'italic' },
   tabs: { flexDirection: 'row', backgroundColor: colors.bg, borderRadius: 10, padding: 3, borderWidth: 1, borderColor: colors.line },
   tab: { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center' },

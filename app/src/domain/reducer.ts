@@ -4,15 +4,17 @@
  */
 import { initialHints, markSeen, type HintId, type HintSettings } from './hints';
 import { inferEnergy, categorize } from './classify';
-import { defaultRawMinutes, estimateDuration } from './duration';
+import { defaultRawMinutes, estimateDuration, updateCalibration } from './duration';
 import { cleanCue, settleIntention } from './intention';
-import { generateFirstStep, nextAlternative, shrinkFirstStep, validateFirstStep } from './firstStep';
+import { generateFirstStep, nextAlternative, shrinkFirstStep, smallestFirstStep, validateFirstStep } from './firstStep';
+import { longHidden } from './planner';
 import type {
   Becoming, EnergyCost, EnergyLevel, ID, ImplementationIntention, ISODateTime, IntentionTrigger, LooseCadence,
   NudgeSettings, OnboardingState, OvercomingSettings, RecurrenceAnswer,
   RecurrenceFollowUp, RecurrenceSettings, RecurrenceVerdict, Routine, Task, TaskEvent, TaskEventType, UserProfile,
 } from './model';
-import { applyAnswer, isRoutineDue, localDay, looserCadence, newRoutine } from './recurrence';
+import { armFor, holdoutStep } from './experiment';
+import { applyAnswer, completedToday, isRoutineDue, localDay, looserCadence, newRoutine } from './recurrence';
 
 export const SLIP_PROMPT_AFTER = 3;
 
@@ -32,6 +34,8 @@ export interface AppState {
   overcoming: OvercomingSettings;
   nudges: NudgeSettings;
   hints: HintSettings;
+  /** Self-experiments the person opted into. */
+  experiments: { firstStepTest: boolean };
 }
 
 export const MAX_BECOMINGS = 3;
@@ -54,6 +58,7 @@ export const initialState: AppState = {
   // Off until asked for. Six a day at most (docs/design/05, §12).
   nudges: { enabled: false, maxPerDay: 6 },
   hints: initialHints,
+  experiments: { firstStepTest: false },
 };
 
 /** Fills fields added after a state was saved, so older saves keep working. */
@@ -67,6 +72,7 @@ export function migrate(saved: Partial<AppState> & { version: 1 }): AppState {
     overcoming: { ...initialState.overcoming, ...saved.overcoming },
     nudges: { ...initialState.nudges, ...saved.nudges },
     hints: { ...initialState.hints, ...saved.hints, seen: { ...saved.hints?.seen } },
+    experiments: { ...initialState.experiments, ...saved.experiments },
   };
 }
 
@@ -124,7 +130,8 @@ export type Action =
   | { type: 'hint_seen'; at: ISODateTime; id: HintId }
   | { type: 'set_hints'; at: ISODateTime; enabled: boolean }
   /** "Show hints again": forget which ones were seen. */
-  | { type: 'reset_hints'; at: ISODateTime };
+  | { type: 'reset_hints'; at: ISODateTime }
+  | { type: 'set_first_step_test'; at: ISODateTime; enabled: boolean };
 
 let eventSeq = 0;
 function eventId(at: ISODateTime): ID {
@@ -184,20 +191,27 @@ function step(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'capture': {
       if (!action.title.trim()) return state;
-      const task = createTask(action.id, action.title, at, state.profile);
-      return { ...state, tasks: [...state.tasks, task], events: logEvent(state, task.id, 'created', at, action.via ? { via: action.via } : undefined) };
+      const made = createTask(action.id, action.title, at, state.profile);
+      const arm = state.experiments.firstStepTest ? armFor(action.id) : undefined;
+      const task = arm === 'without_step' ? { ...made, firstStep: holdoutStep(made.title) } : made;
+      const meta = action.via || arm ? { ...(action.via ? { via: action.via } : {}), ...(arm ? { arm } : {}) } : undefined;
+      return { ...state, tasks: [...state.tasks, task], events: logEvent(state, task.id, 'created', at, meta) };
     }
 
     case 'open': {
       const task = state.tasks.find((t) => t.id === action.taskId);
       // Only the first open counts: start latency runs from when the card first appeared.
       if (!task || task.openedAt) return state;
+      // Back after a long rest on a low day: make it as small as it gets.
+      const hidden = longHidden(state, at).some((t) => t.id === task.id);
       return {
         ...state,
         tasks: updateTask(state, task.id, at, (t) => ({
           ...t,
           openedAt: at,
+          lastSurfacedAt: at,
           latencyInterrupted: undefined,
+          firstStep: hidden ? smallestFirstStep(t.title, t.firstStep, state.profile) : t.firstStep,
           stats: { ...t.stats, timesSurfaced: t.stats.timesSurfaced + 1 },
         })),
         events: logEvent(state, task.id, 'opened', at),
@@ -240,8 +254,25 @@ function step(state: AppState, action: Action): AppState {
     case 'complete': {
       const task = state.tasks.find((t) => t.id === action.taskId);
       if (!task) return state;
+      // One unbroken sitting from first step to done is the only duration we can trust.
+      const started = task.stats.firstStartedAt;
+      const oneSitting = !!started && !(task.lastDeferredAt && Date.parse(task.lastDeferredAt) >= Date.parse(started));
+      const profile = oneSitting
+        ? {
+            ...state.profile,
+            estimateCalibration: {
+              ...state.profile.estimateCalibration,
+              [task.energy]: updateCalibration(
+                state.profile.estimateCalibration[task.energy],
+                task.duration.rawMinutes,
+                (Date.parse(at) - Date.parse(started!)) / 60_000,
+              ),
+            },
+          }
+        : state.profile;
       return {
         ...state,
+        profile,
         routines: task.routineId
           ? updateRoutine(state, task.routineId, at, (r) => ({ ...r, lastDoneAt: at }))
           : state.routines,
@@ -389,7 +420,8 @@ function step(state: AppState, action: Action): AppState {
         tasks: updateTask(state, task.id, at, (t) => ({
           ...t,
           title: clean,
-          firstStep: t.firstStep.source === 'user' ? t.firstStep : fresh.firstStep,
+          // A step they wrote stays theirs; a first-step-test task stays in its arm, under its new name.
+          firstStep: t.firstStep.source === 'user' ? t.firstStep : t.firstStep.source === 'holdout' ? holdoutStep(clean) : fresh.firstStep,
           ...(t.energySource === 'inferred' ? { energy: fresh.energy, duration: fresh.duration } : {}),
         })),
         events: logEvent(state, task.id, 'renamed', at),
@@ -453,7 +485,14 @@ function step(state: AppState, action: Action): AppState {
       return { ...state, recurrence: { ...state.recurrence, enabled: action.enabled, dismissStreak: 0 } };
 
     case 'start_recurrence_session':
-      return { ...state, recurrence: { ...state.recurrence, lastSessionDay: localDay(at) } };
+      return {
+        ...state,
+        recurrence: {
+          ...state.recurrence,
+          lastSessionDay: localDay(at),
+          lastSessionMoment: completedToday(state.events, at) ? 'win' : 'neutral',
+        },
+      };
 
     case 'dismiss_recurrence_session':
       return {
@@ -601,6 +640,9 @@ function step(state: AppState, action: Action): AppState {
 
     case 'set_hints':
       return { ...state, hints: { ...state.hints, enabled: action.enabled } };
+
+    case 'set_first_step_test':
+      return { ...state, experiments: { ...state.experiments, firstStepTest: action.enabled } };
 
     case 'reset_hints':
       return { ...state, hints: { enabled: true, seen: {} } };

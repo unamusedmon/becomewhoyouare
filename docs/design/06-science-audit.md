@@ -107,7 +107,7 @@
 
 **Buffer.** The planning fallacy is robust (Buehler, Griffin & Ross, 1994). A fixed 1.5× is a defensible starting default; I couldn't verify a specific multiplier from the literature, so treat 1.5 as a guess.
 
-**Gap.** 05 §6 says calibration *learns* per energy tier from actual vs. planned. In the code, `estimateCalibration` is set once to 1.5 and never updated. Either build the learning loop (needs a completion duration to be recorded) or change 05 to say it's planned.
+**Gap (now closed).** 05 §6 said calibration *learns* per energy tier, but the code left it at 1.5 forever. It now learns from tasks finished in one unbroken sitting (see the follow-up below).
 
 **Units** ("about two sitcom episodes"): untested design inference, correctly graded ●○○ in 05. No copy overclaims it.
 
@@ -172,16 +172,16 @@ Immediate, vivid completion feedback suits steeper delay discounting in ADHD (Ja
 4. **Slip copy "usually" → "often"** (`copy.ts`).
 5. **Design-doc corrections:** adult WM citation (05), guilt-free grade ●●● → ●●○ (05), implementation-intention effect sizes updated (05, README, `intention.ts`), Zeigarnik → Ovsiankina (02), "dopamine moment" → mood with its bias stated (03), Vohs 2021 added to the ego-depletion line (04), temptation bundling's fade noted (05).
 
-**Recommended, not applied (bigger or a judgment call)**
+**Recommended, then implemented in the follow-up PR**
 
-1. **Run the first-step A/B** (05's test #1). The app's central bet is still untested.
-2. **Harden the evidence thresholds:** more samples per window, a persistence check, and account for tasks released unstarted.
-3. **Cap how long a heavy task can stay hidden** on low-energy days; resurface it once at its smallest step.
-4. **Build the calibration loop** or update 05 §6 to say it isn't there yet.
-5. **Add a plan read-back** in the plan editor (rehearsal moderates implementation-intention effects).
-6. **"Most of that was handed to you" → "Some of that…"** if Zach agrees the claim matters more than the provocation.
-7. **Recurrence timing:** occasionally ask at a neutral moment, or add a good-mood counterpart to `mightBeTheMood`.
-8. **Measure, don't market:** nothing here should be described to users as "proven for ADHD". Almost all of it is proven for people in general, and that's a perfectly good thing to say.
+1. **First-step test** (`experiment.ts`, Becoming settings). Opt-in self-experiment: while on, about half of newly captured tasks (split by task id) show only the task. Start latency is compared by the arm assigned at capture, and nothing is reported until each arm has 10 measured starts. The result is worded as a hint, not a verdict. This is an n-of-1 test, not a trial, but it's the first time the app's central bet can be checked at all.
+2. **Evidence thresholds** (`overcoming.ts`). Eight samples per window instead of five; a drop must also have held three days earlier; and a drop is suppressed when the share of shown-then-released, never-started tasks rose in the recent window.
+3. **Long-hidden heavy tasks** (`planner.ts`). On a low day, a task held back for a week without being shown takes the Now card once, at the bottom of its shrink ladder (a step the person wrote stays theirs). Never on a fried day. "Not now" sends it back to rest.
+4. **Calibration loop** (`duration.ts`, reducer `complete`). Learns per energy tier from one-sitting tasks only (no pause or "not now" after the first step, 1 min to 4 h), 20% moving average, clamped 1×–3×.
+5. **Plan read-back** (`PlanEditor.tsx`). After saving, the plan and any stall plan are shown once with "Say it to yourself once."
+6. **"Some of that was handed to you."**
+7. **Recurrence timing** (`recurrence.ts`). Sessions alternate: after one that rode a win, the next waits for a neutral moment (no completion yet today, energy not low).
+8. **Measure, don't market.** The tone guide now bans "proven", "clinically shown", "science-backed" and dopamine talk, and the README's two dopamine jokes are gone.
 
 ## Could not verify
 

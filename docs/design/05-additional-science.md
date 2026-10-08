@@ -46,7 +46,7 @@ When a task feels congruent with an identity a person holds, they persist more. 
 
 ### 6. Personal estimate calibration ●●○
 People underestimate their own task durations even when they remember past overruns (Buehler et al., 1994). The fix that works is outside-view, reference-class data: what did *similar tasks actually take you*?
-→ `UserProfile.estimateCalibration` learns a multiplier per energy tier from actual vs. planned. It's also a self-overcoming metric (`estimate_accuracy_gain`).
+→ `UserProfile.estimateCalibration` learns a multiplier per energy tier from actual vs. planned (`updateCalibration` in `duration.ts`: tasks finished in one unbroken sitting only, a slow 20% moving average, clamped 1×–3×, so it never drops below the raw guess). The `estimate_accuracy_gain` metric is still planned.
 
 ### 7. Acute exercise as a focus primer ●●○
 Short bouts of moderate exercise produce small-to-moderate acute improvements in executive function in ADHD (e.g., Cerrillo-Urbina et al., 2015 meta-analysis). Nietzsche, conveniently, agreed: "Sit as little as possible…"

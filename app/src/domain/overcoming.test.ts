@@ -42,7 +42,7 @@ test('nothing to show for a new user: no fabricated praise', () => {
 });
 
 test('a real drop in start time becomes evidence, in the guide’s shape', () => {
-  const h = history('Write the essay', [...days(20, 6, 40 * 60), ...days(1, 6, 6 * 60)]);
+  const h = history('Write the essay', [...days(20, 10, 40 * 60), ...days(1, 10, 6 * 60)]);
   const ev = computeEvidence(h.tasks, h.events, NOW);
   const writing = ev.find((e) => e.key === 'start_latency_drop:write');
   assert.ok(writing);
@@ -53,8 +53,8 @@ test('a real drop in start time becomes evidence, in the guide’s shape', () =>
 
 test('the overall line appears when it says something the categories do not', () => {
   const h = merge(
-    history('Write the essay', [...days(20, 6, 40 * 60), ...days(1, 6, 6 * 60)]),
-    history('Clean the kitchen', [...days(25, 6, 20 * 60), ...days(2, 6, 10 * 60)]),
+    history('Write the essay', [...days(20, 10, 40 * 60), ...days(1, 10, 6 * 60)]),
+    history('Clean the kitchen', [...days(25, 10, 20 * 60), ...days(2, 10, 10 * 60)]),
   );
   const keys = computeEvidence(h.tasks, h.events, NOW).map((e) => e.key);
   assert.ok(keys.includes('start_latency_drop:all'));
@@ -62,16 +62,16 @@ test('the overall line appears when it says something the categories do not', ()
 });
 
 test('too few samples on either side means silence', () => {
-  const h = history('Write the essay', [...days(20, 4, 40 * 60), ...days(1, 6, 6 * 60)]);
+  const h = history('Write the essay', [...days(20, 7, 40 * 60), ...days(1, 10, 6 * 60)]);
   assert.deepEqual(computeEvidence(h.tasks, h.events, NOW), []);
 });
 
 test('small or noisy changes are not celebrated', () => {
   // 20% faster: below the 25% bar.
-  const a = history('Write the essay', [...days(20, 6, 600), ...days(1, 6, 480)]);
+  const a = history('Write the essay', [...days(20, 10, 600), ...days(1, 10, 480)]);
   assert.deepEqual(computeEvidence(a.tasks, a.events, NOW), []);
   // 50% faster but only 30 seconds: not a change anyone would feel.
-  const b = history('Write the essay', [...days(20, 6, 60), ...days(1, 6, 30)]);
+  const b = history('Write the essay', [...days(20, 10, 60), ...days(1, 10, 30)]);
   assert.deepEqual(computeEvidence(b.tasks, b.events, NOW), []);
 });
 
@@ -95,8 +95,8 @@ test('"none before" needs history: a three-week-old account gets nothing', () =>
 
 test('one card buys a few quiet days, even when there is more to say', () => {
   const h = merge(
-    history('Write the essay', [...days(20, 6, 40 * 60), ...days(1, 6, 6 * 60)]),
-    history('Clean the kitchen', [...days(25, 6, 20 * 60), ...days(2, 6, 10 * 60)]),
+    history('Write the essay', [...days(20, 10, 40 * 60), ...days(1, 10, 6 * 60)]),
+    history('Clean the kitchen', [...days(25, 10, 20 * 60), ...days(2, 10, 10 * 60)]),
   );
   const ev = computeEvidence(h.tasks, h.events, NOW);
   assert.ok(ev.length >= 2);
@@ -105,10 +105,32 @@ test('one card buys a few quiet days, even when there is more to say', () => {
 });
 
 test('the Now screen shows each piece of evidence at most once a fortnight', () => {
-  const h = history('Write the essay', [...days(20, 6, 40 * 60), ...days(1, 6, 6 * 60)]);
+  const h = history('Write the essay', [...days(20, 10, 40 * 60), ...days(1, 10, 6 * 60)]);
   const ev = computeEvidence(h.tasks, h.events, NOW);
   const first = evidenceToShow(ev, {}, NOW)!;
   const shown = Object.fromEntries(ev.map((e) => [e.key, daysAgo(3)]));
   assert.equal(evidenceToShow(ev, shown, NOW), undefined);
   assert.equal(evidenceToShow(ev, { ...shown, [first.key]: daysAgo(15) }, NOW)?.key, first.key);
+});
+
+test('a drop that only appeared in the last few days is not shown yet', () => {
+  // Baseline slow, and only the last two days are fast: a lucky stretch, not a change.
+  const lucky = Array.from({ length: 8 }, (_, i) => ({ day: i * 0.25, sec: 6 * 60 }));
+  const h = history('Write the essay', [...days(20, 10, 40 * 60), ...days(3, 8, 40 * 60), ...lucky]);
+  assert.ok(!computeEvidence(h.tasks, h.events, NOW).some((e) => e.kind === 'start_latency_drop'));
+  // Three days on, the same drop has held, so then it is shown.
+  assert.ok(computeEvidence(h.tasks, h.events, daysAgo(-3)).some((e) => e.kind === 'start_latency_drop'));
+});
+
+test('a faster median is not celebrated when more tasks were dropped unstarted lately', () => {
+  const h = history('Write the essay', [...days(20, 10, 40 * 60), ...days(1, 10, 6 * 60)]);
+  // Five writing tasks were shown and let go without a start in the last two weeks; none before.
+  for (let i = 0; i < 5; i++) {
+    const id = `dropped-${i}`;
+    h.tasks.push(createTask(id, 'Write the essay', daysAgo(5), initialState.profile));
+    h.events.push({ id: `o-${id}`, taskId: id, type: 'opened', at: daysAgo(5) });
+    h.events.push({ id: `r-${id}`, taskId: id, type: 'released', at: daysAgo(4) });
+  }
+  h.events.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  assert.ok(!computeEvidence(h.tasks, h.events, NOW).some((e) => e.key === 'start_latency_drop:write'));
 });
