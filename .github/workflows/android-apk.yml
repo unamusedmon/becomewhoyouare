@@ -61,7 +61,7 @@ jobs:
         with:
           tag_name: apk-${{ github.run_number }}-${{ steps.apk.outputs.short }}
           target_commitish: ${{ env.SHA }}
-          name: ${{ github.event_name == 'pull_request' && format('Test build from PR #{0}', github.event.pull_request.number) || format('Phone build {0}', steps.apk.outputs.short) }}
+          name: "${{ github.event_name == 'pull_request' && format('Test build from PR #{0}', github.event.pull_request.number) || format('Phone build {0}', steps.apk.outputs.short) }}"
           prerelease: ${{ github.event_name == 'pull_request' }}
           files: ${{ steps.apk.outputs.name }}
           body: |
