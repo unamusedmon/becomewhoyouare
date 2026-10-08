@@ -40,7 +40,8 @@
           "microphonePermission": "Lets you say tasks out loud instead of typing them.",
           "speechRecognitionPermission": "Turns what you say into tasks."
         }
-      ]
+      ],
+      "./plugins/withQuickAddShortcut"
     ]
   }
 }

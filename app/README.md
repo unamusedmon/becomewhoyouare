@@ -53,6 +53,11 @@ aside is lost: Becoming lists everything let go or put off in onboarding, with "
 Tapping a task under "Also here" offers do this now, rename or let it go, and tapping the task
 name on the Now card renames it. The plan editor shows one kind of "when" at a time.
 
+Quick add: a + button sits at the bottom right of the Now and Becoming screens and opens a
+one-field sheet (with the mic) that stays open for a burst of thoughts. On Android, long-pressing
+the app icon offers "Quick add" too. That shortcut is native (`plugins/withQuickAddShortcut.js`
+opens `becomewhoyouare://add`), so it appears in development and release builds, not in Expo Go.
+
 Everything is stored on the device (AsyncStorage). The one exception is speech: the app asks
 Android for on-device recognition when the phone supports it, and otherwise the phone's speech
 service (usually Google's) may process the audio online. The app itself keeps no recordings.
