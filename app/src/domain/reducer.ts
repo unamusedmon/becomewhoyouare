@@ -73,6 +73,8 @@ export function migrate(saved: Partial<AppState> & { version: 1 }): AppState {
 export type Action =
   | { type: 'capture'; at: ISODateTime; id: ID; title: string; via?: 'voice' }
   | { type: 'open'; at: ISODateTime; taskId: ID }
+  /** The app went to the background: any start-latency clock that is running stops meaning anything. */
+  | { type: 'backgrounded'; at: ISODateTime }
   | { type: 'first_step_done'; at: ISODateTime; taskId: ID }
   | { type: 'complete'; at: ISODateTime; taskId: ID }
   | { type: 'not_now'; at: ISODateTime; taskId: ID }
@@ -195,16 +197,26 @@ function step(state: AppState, action: Action): AppState {
         tasks: updateTask(state, task.id, at, (t) => ({
           ...t,
           openedAt: at,
+          latencyInterrupted: undefined,
           stats: { ...t.stats, timesSurfaced: t.stats.timesSurfaced + 1 },
         })),
         events: logEvent(state, task.id, 'opened', at),
       };
     }
 
+    case 'backgrounded': {
+      // Time spent away from the app is not hesitation; counting it would make the evidence lie.
+      if (!state.tasks.some((t) => t.openedAt && !t.latencyInterrupted)) return state;
+      return {
+        ...state,
+        tasks: state.tasks.map((t) => (t.openedAt && !t.latencyInterrupted ? { ...t, latencyInterrupted: true } : t)),
+      };
+    }
+
     case 'first_step_done': {
       const task = state.tasks.find((t) => t.id === action.taskId);
       if (!task || task.firstStep.doneAt) return state;
-      const latencySec = task.openedAt
+      const latencySec = task.openedAt && !task.latencyInterrupted
         ? Math.max(0, Math.round((Date.parse(at) - Date.parse(task.openedAt)) / 1000))
         : undefined;
       return {
@@ -213,6 +225,7 @@ function step(state: AppState, action: Action): AppState {
           ...settleIntention(t),
           state: 'started',
           openedAt: undefined,
+          latencyInterrupted: undefined,
           firstStep: { ...t.firstStep, doneAt: at },
           stats: {
             ...t.stats,

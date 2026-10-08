@@ -62,6 +62,11 @@ export interface Task {
   stats: TaskStats;
   /** When the task card was last put in front of the user; start latency is measured from here. */
   openedAt?: ISODateTime;
+  /**
+   * The app left the foreground while the clock was running, so the gap no longer
+   * measures hesitation. That start is logged without a latency.
+   */
+  latencyInterrupted?: boolean;
   /** Last "not now"; the planner puts recently deferred tasks behind the others. */
   lastDeferredAt?: ISODateTime;
   /** True while the slip question is waiting for an answer. */

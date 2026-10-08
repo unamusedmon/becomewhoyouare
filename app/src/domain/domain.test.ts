@@ -105,6 +105,26 @@ test('start latency is measured from first open to first step done', () => {
   assert.deepEqual(s.events.at(-1)?.meta, { latencySec: 95 });
 });
 
+test('a start after the app was backgrounded is logged without a latency', () => {
+  let s = withTasks('Write email draft to landlord');
+  s = reducer(s, { type: 'open', at: plus(10), taskId: 't0' });
+  s = reducer(s, { type: 'backgrounded', at: plus(20) });
+  s = reducer(s, { type: 'first_step_done', at: plus(4000), taskId: 't0' });
+  assert.equal(s.tasks[0].state, 'started');
+  assert.equal(s.tasks[0].stats.lastStartLatencySec, undefined);
+  assert.equal(s.events.at(-1)?.meta, undefined);
+});
+
+test('a fresh open after "not now" measures latency again, even if the app was backgrounded before', () => {
+  let s = withTasks('Write email draft to landlord');
+  s = reducer(s, { type: 'open', at: plus(10), taskId: 't0' });
+  s = reducer(s, { type: 'backgrounded', at: plus(20) });
+  s = reducer(s, { type: 'not_now', at: plus(30), taskId: 't0' });
+  s = reducer(s, { type: 'open', at: plus(100), taskId: 't0' });
+  s = reducer(s, { type: 'first_step_done', at: plus(130), taskId: 't0' });
+  assert.deepEqual(s.events.at(-1)?.meta, { latencySec: 30 });
+});
+
 test('"not now" three times raises the slip question, and the task goes to the back', () => {
   let s = withTasks('Do taxes', 'Clean the kitchen');
   for (let i = 1; i <= SLIP_PROMPT_AFTER; i++) {

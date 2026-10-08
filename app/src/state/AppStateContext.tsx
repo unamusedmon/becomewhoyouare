@@ -28,7 +28,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     dispatch({ type: 'tick' });
     const timer = setInterval(() => dispatch({ type: 'tick' }), TICK_MS);
-    const sub = RNAppState.addEventListener('change', (s) => s === 'active' && dispatch({ type: 'tick' }));
+    const sub = RNAppState.addEventListener('change', (s) => {
+      if (s === 'active') dispatch({ type: 'tick' });
+      else if (s === 'background') dispatch({ type: 'backgrounded' });
+    });
     return () => {
       clearInterval(timer);
       sub.remove();

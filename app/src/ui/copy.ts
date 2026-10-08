@@ -25,7 +25,7 @@ export const copy = {
     mic: 'Tap the mic and say several things at once. Each becomes its own task.',
     rename: 'Tap the task name to fix a typo or a misheard word.',
     also_here: 'Tap any of these to do it now, rename it, or let it go.',
-    plan: 'Pick one kind of "when". Plans tied to a moment get done far more often.',
+    plan: 'Pick one kind of "when". Plans tied to a moment get done more often.',
     undo: 'Mistapped? Undo is there for a few seconds after anything you might regret.',
     set_aside: 'Nothing here is gone. "bring back" puts it on your list again.',
   } as Record<import('../domain/hints').HintId, string>,
@@ -46,7 +46,7 @@ export const copy = {
   completions: ['Imposed on the world.', 'That exists now because of you.', 'One less weight.'],
 
   slipTitle: 'This one keeps slipping.',
-  slipBody: "That usually means it's built wrong, not that you are. Shrink it, or let it go?",
+  slipBody: "That often means it's built wrong, not that you are. Shrink it, or let it go?",
   reshapeTitle: 'This might need a different shape.',
   reshapeBody: "Smaller didn't help, so size isn't the problem. Put the first step in your own words, or let it go?",
   shrink: 'shrink it',
@@ -92,7 +92,7 @@ export const copy = {
     childSkipNote: "You don't have to know yet.",
     amorTitle: 'Your brain works differently.',
     amorBody:
-      'It has real costs, and real powers: hyperfocus, speed under pressure, novelty-hunting, sideways ideas. This app is built for the brain you have.',
+      'It has real costs. Many people with a brain like this also report upsides: deep absorption when something grabs them, a gear that kicks in under a deadline, a hunger for the new. This app is built for the brain you have.',
     optInTitle: 'One more thing.',
     optInBody:
       'Now and then, should the app ask whether a routine still deserves a place in your life? One question, easy to skip. You can turn it off anytime.',
@@ -179,7 +179,7 @@ export const copy = {
     link: 'plan when',
     change: 'change plan',
     title: 'When will you do it?',
-    body: 'Tie it to something that already happens. A plan with a when and a where gets done far more often than a good intention.',
+    body: 'Tie it to something that already happens. A plan with a when and a where gets done more often than a good intention alone.',
     modes: { event: 'a moment', after: 'after a task', time: 'a time' } as Record<'event' | 'after' | 'time', string>,
     addPlace: 'add a place or a stall plan',
     when: 'When…',

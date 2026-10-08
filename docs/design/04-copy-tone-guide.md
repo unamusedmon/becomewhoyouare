@@ -28,7 +28,7 @@
 | overdue, late, behind, missed, failed | Debt and shame framing | "still here", "slipped", "past its date" (hard deadlines only) |
 | should, must, need to, have to | Moral imperative (the camel's "thou shalt") | "you could", "next:", or just the action itself |
 | lazy, procrastinating, unproductive | Character judgment | Describe the task's structure, not the person |
-| discipline, willpower, push through, grind, hustle, crush it | Willpower models of self-control have weak support (the large ego-depletion replication, Hagger et al. 2016, found an effect near zero) and they shame ADHD brains | "make it easier", "shrink it", "set it up so it starts itself" |
+| discipline, willpower, push through, grind, hustle, crush it | Willpower models of self-control have weak support (the large ego-depletion replications, Hagger et al. 2016 and Vohs et al. 2021 with 36 labs, both found effects near zero) and they shame ADHD brains | "make it easier", "shrink it", "set it up so it starts itself" |
 | despite your ADHD, even with ADHD, fix, overcome your ADHD | Frames the brain as defective | "your brain works differently", "for how you work" |
 | streak broken, you lost your streak | Loss punishment | Streaks don't exist (see Progress) |
 | productivity, optimize, efficiency, KPIs | Corporate task manager voice | "force", "what you're building", "today's allocation" |

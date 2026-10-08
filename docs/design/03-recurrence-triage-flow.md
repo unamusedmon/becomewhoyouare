@@ -22,7 +22,7 @@ User picks one (default: **after first completion**):
 
 | Moment | Why |
 |---|---|
-| **After the day's first completion** (default) | Rides an existing dopamine moment. The user is already in a "yes" state, and the question costs nothing extra to reach. |
+| **After the day's first completion** (default) | Rides a good moment: the user is in a better mood and the question costs nothing extra to reach. Caveat: good mood also tilts answers toward "yes" (mood-as-information, Schwarz & Clore, 1983), so a yes here is slightly inflated. See 06. |
 | Morning | For people who like to plan. Shown under today's Now card, never in front of it. |
 | Evening | Reflective. Pairs with the optional day close. |
 | Manual only | A "Recurrence" button in the Becoming tab. |

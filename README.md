@@ -33,7 +33,7 @@ Then he deleted it, and this app was born.
 
 **§6. Time you can feel.** "45 minutes" means nothing to a time-blind brain. "About one laundry wash" means something. Every estimate gets a generous 1.5× buffer, because the planning fallacy is real and it is coming for you.
 
-**§7. Implementation intentions.** *"When I finish my coffee, at my desk, I'll open the report."* Tie a task to something that already happens. When it happens, tap **it's now** and the task jumps to the front. This is the best-evidenced trick in the whole design (Gollwitzer & Sheeran, 2006). Nietzsche would have called it "commanding oneself." The psychologists call it d ≈ 0.65.
+**§7. Implementation intentions.** *"When I finish my coffee, at my desk, I'll open the report."* Tie a task to something that already happens. When it happens, tap **it's now** and the task jumps to the front. This is the best-evidenced trick in the whole design (Gollwitzer & Sheeran, 2006; Sheeran, Listrom & Gollwitzer, 2024). Nietzsche would have called it "commanding oneself." The psychologists call it a reliable, moderate effect across 642 tests.
 
 **§8. The eternal recurrence, as a triage question.** Opt-in, rare, and never more than three at a time: *"If you had to live this day again, innumerable times, exactly the same, would you keep this on the list?"* Say yes and it is affirmed. Say no and you can reshape it, make it rarer, or let it go. Some things are tolls of being alive, like taxes and school pickup. Those get asked *"could this weigh less?"* instead of *"should this exist?"* Even Zarathustra had to renew his passport.
 
