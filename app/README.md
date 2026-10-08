@@ -55,7 +55,8 @@ name on the Now card renames it. The plan editor shows one kind of "when" at a t
 
 Slice 8 adds hints, tooltips for a touch screen. Each is one line next to the thing it explains,
 shown once, at the moment that thing is on screen, and gone with a tap or by using the feature.
-Never more than one at a time, with a pause between them (`src/domain/hints.ts`). Becoming has a
+Never more than one at a time, with a pause between them (`src/domain/hints.ts`). Once a hint
+has been seen, a small (i) beside the feature shows it again on tap. Becoming has a
 switch to turn them off and a link to show them all again.
 
 Everything is stored on the device (AsyncStorage). The one exception is speech: the app asks

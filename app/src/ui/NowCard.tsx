@@ -8,7 +8,7 @@ import type { Dispatch } from '../state/useAppState';
 import { Button, RenameField, s as shared, useBackToClose } from './components';
 import { completionLine, copy } from './copy';
 import { clockLabel } from '../domain/duration';
-import { Hint } from './Hint';
+import { HintSpot, InfoButton } from './Hint';
 import { PlanEditor } from './PlanEditor';
 import { colors, fonts, space } from './theme';
 
@@ -149,8 +149,11 @@ export function NowCard({ task, reason, becomings, showHint, tasks, dispatch, on
       <View style={{ gap: 2 }}>
         {fired ? <Text style={[shared.label, { color: colors.accent }]}>{copy.plan.firedHeader}</Text> : null}
         <Text style={st.task} numberOfLines={2} onPress={() => setRenaming(true)} accessibilityRole="button" accessibilityHint={copy.renameHint}>{task.title}</Text>
-        <Text style={shared.faint}>{meta}</Text>
-        {hint === 'rename' ? <View style={{ marginTop: space.sm }}><Hint id="rename" /></View> : null}
+        <View style={st.metaRow}>
+          <Text style={[shared.faint, { flexShrink: 1 }]}>{meta}</Text>
+          <InfoButton id="rename" />
+        </View>
+        <View style={{ marginTop: space.xs }}><HintSpot id="rename" auto={hint} /></View>
       </View>
       <View style={st.divider} />
       <View style={{ gap: space.xs }}>
@@ -186,6 +189,7 @@ const st = StyleSheet.create({
   step: { color: colors.ink, fontFamily: fonts.serif, fontSize: 30, lineHeight: 38 },
   task: { color: colors.ink, fontFamily: fonts.sans, fontSize: 17, lineHeight: 23, opacity: 0.9 },
   stepLabel: { color: colors.accent, fontFamily: fonts.sans, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   hint: { color: colors.muted, fontFamily: fonts.sans, fontSize: 14, lineHeight: 20 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.line },
   input: { borderBottomWidth: 1, borderBottomColor: colors.accent, paddingVertical: space.xs },
