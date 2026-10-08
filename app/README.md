@@ -108,6 +108,23 @@ The next sync on a device with Org turned on picks those up. Deleting a heading 
 can never undo newer work, so keep the file open in Emacs with auto-revert on.
 Rules: `src/domain/org.ts`.
 
+**Encryption** (Settings, needs sync) seals the sync file with a passphrase before it leaves
+the device: scrypt stretches the passphrase into a key and AES-256-GCM encrypts the data, so the
+server only holds scrambled bytes. Enter the same passphrase on every device; entering a new one on
+a device that already has the current one changes it, and the others ask for the new one. The
+passphrase is never stored. If it's lost, your devices still have everything; "replace the server's
+copy" starts over with a new passphrase from one device. There's no switching encryption back off
+yet. Code: `src/domain/crypto.ts`.
+
+With encryption on, a plaintext Org file would give the game away, so the Org file is only written
+as `become-who-you-are.org.gpg`, encrypted to a **GPG key you import** (paste
+`gpg --armor --export-secret-keys KEYID`, plus its passphrase). Its first line sets
+`epa-file-encrypt-to`, so Emacs (EasyPG) opens it with your keyring and saves it back to the same
+key, and the app reads your edits. Import only the public key and the app still writes the file
+but can't read edits back. The key stays on the device and is never synced; a dedicated subkey is a
+good idea. Orgzly can't read `.gpg` files. Code: `src/domain/pgp.ts` (openpgp.js); on Android,
+`src/state/webcryptoShim.ts` supplies the little WebCrypto it needs.
+
 ## Not yet
 
 Model-generated first steps (needs a small server so no API key ships in the app),

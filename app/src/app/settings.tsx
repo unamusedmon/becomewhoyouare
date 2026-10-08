@@ -8,7 +8,7 @@ import { requestNudgePermission } from '../state/nudgeSync';
 import { s as shared, Toggle } from '../ui/components';
 import { copy } from '../ui/copy';
 import { Screen, screenStyles } from '../ui/Screen';
-import { OrgSettings, SyncSettings } from '../ui/SyncSettings';
+import { EncryptionSettings, OrgSettings, SyncSettings } from '../ui/SyncSettings';
 import { colors, fonts, space, themed } from '../ui/theme';
 
 const b = copy.becoming;
@@ -35,6 +35,7 @@ export default function SettingsScreen() {
       <Text style={screenStyles.h1}>{o.title}</Text>
 
       <SyncSettings />
+      <View style={st.setting}><EncryptionSettings /></View>
       <View style={st.setting}><OrgSettings /></View>
 
       <View style={[st.section, st.setting]}>

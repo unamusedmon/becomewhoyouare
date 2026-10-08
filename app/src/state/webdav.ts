@@ -1,5 +1,5 @@
 /**
- * The smallest WebDAV client that sync needs: GET and PUT of one file, with ETags so
+ * The smallest WebDAV client that sync needs: GET, PUT and DELETE of one file, with ETags so
  * two devices can't overwrite each other blindly. Works with Nextcloud, ownCloud,
  * Fastmail files, rclone serve webdav, Apache mod_dav and friends.
  *
@@ -19,6 +19,8 @@ export interface DavConfig {
 export interface DavResult {
   status: number;
   text?: string;
+  /** Set instead of text when the body was asked for as bytes (the .org.gpg file). */
+  bytes?: Uint8Array;
   etag?: string;
 }
 
@@ -40,27 +42,37 @@ function hasRelay(): Promise<boolean> {
   return relay;
 }
 
-async function request(cfg: DavConfig, method: 'GET' | 'PUT', name: string, init: { body?: string; headers?: Record<string, string> } = {}): Promise<DavResult> {
+async function request(
+  cfg: DavConfig,
+  method: 'GET' | 'PUT' | 'DELETE',
+  name: string,
+  init: { body?: string | Uint8Array; headers?: Record<string, string>; binary?: boolean } = {},
+): Promise<DavResult> {
   const url = fileUrl(cfg, name);
   const headers: Record<string, string> = { Authorization: basicAuth(cfg.user, cfg.password), ...init.headers };
   const viaRelay = await hasRelay();
   const target = viaRelay ? `/__dav?url=${encodeURIComponent(url)}` : url;
   if (viaRelay) headers['X-BWYA-Relay'] = '1';
-  const res = await fetch(target, { method, headers, body: init.body, cache: 'no-store' });
+  const res = await fetch(target, { method, headers, body: init.body as BodyInit | undefined, cache: 'no-store' });
   const etag = res.headers.get('ETag') ?? undefined;
-  const text = method === 'GET' && res.ok ? await res.text() : undefined;
-  return { status: res.status, text, etag };
+  if (method !== 'GET' || !res.ok) return { status: res.status, etag };
+  if (init.binary) return { status: res.status, bytes: new Uint8Array(await res.arrayBuffer()), etag };
+  return { status: res.status, text: await res.text(), etag };
 }
 
-export function davGet(cfg: DavConfig, name: string): Promise<DavResult> {
-  return request(cfg, 'GET', name);
+export function davGet(cfg: DavConfig, name: string, opts: { binary?: boolean } = {}): Promise<DavResult> {
+  return request(cfg, 'GET', name, opts);
+}
+
+export function davDelete(cfg: DavConfig, name: string): Promise<DavResult> {
+  return request(cfg, 'DELETE', name);
 }
 
 /**
  * `ifMatch`: only overwrite the version we read. `undefined` with `create` set: only
  * write if the file doesn't exist yet. Either way a 412 means someone else wrote first.
  */
-export function davPut(cfg: DavConfig, name: string, body: string, contentType: string, opts: { ifMatch?: string; create?: boolean } = {}): Promise<DavResult> {
+export function davPut(cfg: DavConfig, name: string, body: string | Uint8Array, contentType: string, opts: { ifMatch?: string; create?: boolean } = {}): Promise<DavResult> {
   const headers: Record<string, string> = { 'Content-Type': contentType };
   if (opts.ifMatch) headers['If-Match'] = opts.ifMatch;
   else if (opts.create) headers['If-None-Match'] = '*';
