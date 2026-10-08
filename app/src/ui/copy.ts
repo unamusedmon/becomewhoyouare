@@ -12,6 +12,12 @@ export const copy = {
   energyNow: (level: string) => `Force right now: ${level}.`,
   change: 'change',
   undo: 'Undo',
+  quickAdd: {
+    button: 'Quick add',
+    title: 'Get it out of your head.',
+    done: 'done',
+    close: 'Close quick add',
+  },
   hintDismiss: 'got it',
   hints: {
     energy: 'Your answer decides which tasks show up. Low force means only the light ones.',

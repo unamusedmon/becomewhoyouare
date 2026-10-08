@@ -58,6 +58,11 @@ shown once, at the moment that thing is on screen, and gone with a tap or by usi
 Never more than one at a time, with a pause between them (`src/domain/hints.ts`). Becoming has a
 switch to turn them off and a link to show them all again.
 
+Quick add: a + button sits at the bottom right of the Now and Becoming screens and opens a
+one-field sheet (with the mic) that stays open for a burst of thoughts. On Android, long-pressing
+the app icon offers "Quick add" too. That shortcut is native (`plugins/withQuickAddShortcut.js`
+opens `becomewhoyouare://add`), so it appears in development and release builds, not in Expo Go.
+
 Everything is stored on the device (AsyncStorage). The one exception is speech: the app asks
 Android for on-device recognition when the phone supports it, and otherwise the phone's speech
 service (usually Google's) may process the audio online. The app itself keeps no recordings.

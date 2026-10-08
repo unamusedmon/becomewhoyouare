@@ -120,7 +120,7 @@ export function useMic(dictation: Dictation, input: RefObject<TextInput | null>,
   };
 }
 
-export function CaptureBar({ onCapture }: { onCapture: (title: string, via?: 'voice') => void }) {
+export function CaptureBar({ onCapture, autoFocus }: { onCapture: (title: string, via?: 'voice') => void; autoFocus?: boolean }) {
   const [text, setText] = useState('');
   const [note, setNote] = useState<string | null>(null);
   const input = useRef<TextInput>(null);
@@ -148,6 +148,10 @@ export function CaptureBar({ onCapture }: { onCapture: (title: string, via?: 'vo
       <View style={s.captureRow}>
         <TextInput
           ref={input}
+          autoFocus={autoFocus}
+          // Keep the keyboard up after adding, so a burst of thoughts can go in one after another.
+          submitBehavior="submit"
+          {...(Platform.OS === 'web' ? ({ blurOnSubmit: false } as object) : null)}
           value={dictation.listening ? dictation.heard : text}
           onChangeText={setText}
           onSubmitEditing={submit}
