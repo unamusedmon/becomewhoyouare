@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isFresh, UNDO_MS } from '../domain/undo';
 import { useApp } from '../state/AppStateContext';
 import { copy } from './copy';
-import { Hint, useHint } from './Hint';
+import { HintSpot, InfoButton, useHint } from './Hint';
 import { colors, fonts, space } from './theme';
 
 /** A quiet bar at the bottom after a tap that's easy to regret. Gone on its own. */
@@ -25,9 +25,10 @@ export function UndoBar() {
   if (!fresh || !undo) return null;
   return (
     <View style={[st.wrap, { bottom: insets.bottom + space.md }]} pointerEvents="box-none">
-      {hint === 'undo' ? <View style={st.hint}><Hint id="undo" caret="down" align="right" /></View> : null}
+      <View style={st.hint}><HintSpot id="undo" auto={hint} caret="down" align="right" /></View>
       <View style={st.bar} accessibilityLiveRegion="polite">
         <Text style={st.text}>{undo.label}</Text>
+        <InfoButton id="undo" />
         <Pressable accessibilityRole="button" onPress={() => { undoLast(); dispatch({ type: 'hint_seen', id: 'undo' }); }} hitSlop={12} style={st.btn}>
           <Text style={st.btnText}>{copy.undo}</Text>
         </Pressable>

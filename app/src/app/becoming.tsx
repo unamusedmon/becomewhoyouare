@@ -11,7 +11,7 @@ import { requestNudgePermission } from '../state/nudgeSync';
 import { newId } from '../state/useAppState';
 import { s as shared } from '../ui/components';
 import { copy } from '../ui/copy';
-import { Hint, useHint } from '../ui/Hint';
+import { HintSpot, InfoButton, useHint } from '../ui/Hint';
 import { Screen, screenStyles } from '../ui/Screen';
 import { colors, fonts, space } from '../ui/theme';
 
@@ -142,13 +142,16 @@ export default function BecomingScreen() {
       </View>
 
       <View style={st.section}>
-        <Text style={shared.label}>{b.released}</Text>
+        <View style={st.labelRow}>
+          <Text style={shared.label}>{b.released}</Text>
+          <InfoButton id="set_aside" />
+        </View>
+        <HintSpot id="set_aside" auto={hint} caret="up" />
         {released.length === 0 ? (
           <Text style={shared.faint}>{b.releasedEmpty}</Text>
         ) : (
           <>
             <Text style={shared.faint}>{b.releasedNote}</Text>
-            {hint === 'set_aside' ? <Hint id="set_aside" caret="down" align="right" /> : null}
             {released.map((r) => (
               <View key={r.key} style={st.row}>
                 <View style={{ flex: 1 }}>
@@ -246,6 +249,7 @@ const st = StyleSheet.create({
   evidence: { color: colors.ink, fontFamily: fonts.serif, fontSize: 17, lineHeight: 25 },
   released: { color: colors.muted, fontFamily: fonts.serif, fontSize: 15, fontStyle: 'italic' },
   bringBack: { color: colors.accent, fontFamily: fonts.sans, fontSize: 14, paddingVertical: 8, paddingLeft: 12 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   resetHints: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13, textDecorationLine: 'underline', marginTop: -space.sm },
   setting: { paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   settingText: { flex: 1, color: colors.muted, fontFamily: fonts.sans, fontSize: 14 },

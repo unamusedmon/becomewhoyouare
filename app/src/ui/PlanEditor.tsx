@@ -9,7 +9,7 @@ import { requestNudgePermission } from '../state/nudgeSync';
 import type { Dispatch } from '../state/useAppState';
 import { Button, s as shared } from './components';
 import { copy } from './copy';
-import { Hint } from './Hint';
+import { HintSpot, InfoButton } from './Hint';
 import { colors, fonts, space } from './theme';
 
 const p = copy.plan;
@@ -63,11 +63,14 @@ export function PlanEditor({ task, tasks, dispatch, onDone, showHint }: { task: 
 
   return (
     <View style={st.card}>
-      <Text style={st.title}>{p.title}</Text>
+      <View style={st.titleRow}>
+        <Text style={[st.title, { flexShrink: 1 }]}>{p.title}</Text>
+        <InfoButton id="plan" />
+      </View>
       <Text style={st.body}>{p.body}</Text>
       <Text style={shared.faint}>{task.title}</Text>
 
-      {showHint ? <Hint id="plan" caret="down" /> : null}
+      <HintSpot id="plan" auto={showHint ? 'plan' : undefined} caret="down" />
       <View style={st.tabs} accessibilityRole="tablist">
         {modes.map((m) => (
           <Pressable
@@ -201,6 +204,7 @@ const st = StyleSheet.create({
   title: { color: colors.ink, fontFamily: fonts.serif, fontSize: 24, lineHeight: 30 },
   body: { color: colors.ink, fontFamily: fonts.sans, fontSize: 15, lineHeight: 22, opacity: 0.85 },
   field: { gap: space.sm },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   input: {
     color: colors.ink, fontFamily: fonts.sans, fontSize: 16, backgroundColor: colors.bg,
     borderRadius: 10, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 11,
