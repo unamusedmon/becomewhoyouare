@@ -9,6 +9,7 @@ import { requestNudgePermission } from '../state/nudgeSync';
 import type { Dispatch } from '../state/useAppState';
 import { Button, s as shared } from './components';
 import { copy } from './copy';
+import { Hint } from './Hint';
 import { colors, fonts, space } from './theme';
 
 const p = copy.plan;
@@ -17,7 +18,7 @@ type Mode = 'event' | 'after' | 'time';
 const MODES: Mode[] = ['event', 'after', 'time'];
 
 /** "When X, where Y, I'll do the first step. If I stall, then Z." Nothing in it is required but the when. */
-export function PlanEditor({ task, tasks, dispatch, onDone }: { task: Task; tasks: Task[]; dispatch: Dispatch; onDone: (saved: boolean) => void }) {
+export function PlanEditor({ task, tasks, dispatch, onDone, showHint }: { task: Task; tasks: Task[]; dispatch: Dispatch; onDone: (saved: boolean) => void; showHint?: boolean }) {
   const i = task.intention;
   const [cue, setCue] = useState(i?.trigger.kind === 'event' ? i.trigger.text : '');
   const [afterId, setAfterId] = useState<string | undefined>(i?.trigger.kind === 'after_task' ? i.trigger.taskId : undefined);
@@ -66,6 +67,7 @@ export function PlanEditor({ task, tasks, dispatch, onDone }: { task: Task; task
       <Text style={st.body}>{p.body}</Text>
       <Text style={shared.faint}>{task.title}</Text>
 
+      {showHint ? <Hint id="plan" caret="down" /> : null}
       <View style={st.tabs} accessibilityRole="tablist">
         {modes.map((m) => (
           <Pressable
