@@ -72,14 +72,16 @@ Everything is stored on the device (AsyncStorage) unless you turn on sync. The o
 Android for on-device recognition when the phone supports it, and otherwise the phone's speech
 service (usually Google's) may process the audio online. The app itself keeps no recordings.
 
-## Web version and sync
+## Sync, and the web version
 
-The same app runs in a browser. Build it once, then serve it on your own computer:
+The web version is its own app now, in
+[unamusedmon/becomewhoyouare-web](https://github.com/unamusedmon/becomewhoyouare-web). It
+syncs with this one through the same WebDAV folder and the same files.
 
-```bash
-npm run web:build     # writes dist/
-npm run web:serve     # http://localhost:8787
-```
+Each repo keeps its own copy of the shared rules in `src/domain/` (model, reducer, `sync.ts`,
+`org.ts`, `crypto.ts`, `pgp.ts`). **The sync file format must stay compatible in both**: change
+one of those here and make the same change there, or the phone and the browser stop
+understanding each other.
 
 **Sync** goes through a WebDAV folder you already have (Nextcloud, Fastmail, rclone serve,
 any WebDAV server). Turn it on in Settings on each device with the same folder, username and an
@@ -89,10 +91,8 @@ Whatever was changed most recently wins per task, routine and becoming; history 
 because events are merged, not replaced. The password stays on the device and is never synced.
 Rules: `src/domain/sync.ts`; transport: `src/state/webdav.ts`, `src/state/sync.ts`.
 
-Browsers can't talk to most WebDAV servers directly (CORS), so `web:serve` also relays those
-requests at `/__dav`. It listens on 127.0.0.1 only and needs a header other websites can't send.
-Set `DAV_ALLOW=cloud.example.com` to limit where it may forward. The Android app talks to the
-server directly.
+The app talks to the WebDAV server directly. (The web version needs a small local relay for
+that, because of browser CORS rules; its README explains.)
 
 **Org-mode** is off until you turn it on (Settings, needs sync). Then the app also writes
 `become-who-you-are.org` beside the data file, with sections for Becoming, Tasks, Routines,

@@ -55,7 +55,9 @@ npm test            # the domain tests, which prove things rather than merely be
 npm run typecheck   # TypeScript: the categorical imperative, but for types
 ```
 
-Everything lives on your device (AsyncStorage). Nothing leaves the phone. You are a free spirit and so is your data.
+Everything lives on your device (AsyncStorage). Nothing leaves the phone unless you turn on sync. You are a free spirit and so is your data.
+
+**The laptop sibling.** There is a web version, in its own repo: [becomewhoyouare-web](https://github.com/unamusedmon/becomewhoyouare-web). The two keep in step through a WebDAV folder you own (Settings → Sync), with optional end-to-end encryption and an optional Org-mode file for Emacs. Each repo carries its own copy of the sync rules in `app/src/domain/`, so **the sync file format must stay compatible in both**. Details in [`app/README.md`](app/README.md).
 
 > Heads up: `npx expo install` sometimes can't reach Expo's servers from cloud sandboxes. In that case, pin versions from `node_modules/expo/bundledNativeModules.json` and use plain `npm install`. Even the overman reads the lockfile.
 

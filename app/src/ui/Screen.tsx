@@ -17,7 +17,7 @@ export function Screen({ children, nav }: { children: ReactNode; nav?: { href: '
   const lift = isFresh(undo, Date.now()) ? 64 : 0;
   return (
     <View style={st.root}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView
           contentContainerStyle={[st.scroll, { paddingTop: insets.top + space.lg, paddingBottom: insets.bottom + space.xl + 56 }]}
           keyboardShouldPersistTaps="handled"

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '../state/AppStateContext';
@@ -20,7 +20,7 @@ export default function QuickAdd() {
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
-    <KeyboardAvoidingView style={st.root} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+    <KeyboardAvoidingView style={st.root} behavior="padding">
       <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel={copy.quickAdd.close} />
       <View style={[st.sheet, { paddingBottom: insets.bottom + space.md }]}>
         <View style={st.head}>

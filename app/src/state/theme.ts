@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
 
 import { setThemeMode, type ThemeMode } from '../ui/theme';
 
@@ -16,15 +15,11 @@ export interface ThemeControls {
   setMode: (mode: ThemeMode) => void;
 }
 
-/** Dark unless this device opted into light. The web reads its choice before first paint. */
+/** Dark unless this device opted into light. */
 export function useThemeMode(): ThemeControls {
   const [mode, setState] = useState<ThemeMode>(() => {
-    let initial: ThemeMode = 'dark';
-    if (Platform.OS === 'web') {
-      try { initial = stored(globalThis.localStorage?.getItem(KEY)) ?? 'dark'; } catch { /* private mode */ }
-    }
-    setThemeMode(initial);
-    return initial;
+    setThemeMode('dark');
+    return 'dark';
   });
 
   useEffect(() => {

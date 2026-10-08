@@ -257,7 +257,7 @@ export const copy = {
     gpgKey: (who: string, fpr: string) => `${who} · ${fpr}`,
     gpgTwoWay: 'Secret key imported: edits made in Emacs come back here.',
     gpgOneWay: "Public key only: the app writes .org.gpg, but can't read edits made in Emacs. Import the secret key on a device where you want them back.",
-    gpgStored: 'The key stays on this device (in this browser, on the web) and is never synced. Consider a separate key or subkey just for this.',
+    gpgStored: 'The key stays on this device and is never synced. Consider a separate key or subkey just for this.',
   },
 
   sync: {
