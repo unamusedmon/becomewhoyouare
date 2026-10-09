@@ -21,6 +21,13 @@ const mod: Mod | null = (() => {
 })();
 
 const NORMAL_ENDINGS = new Set(['no-speech', 'aborted', 'speech-timeout']);
+/**
+ * Failures that usually mean the recognizer hiccuped, not that this phone
+ * can't listen: the speech service restarting under us, a session still
+ * winding down ("busy"), a flaky connection. One silent retry within the
+ * same tap; only if it happens twice in a row does the person see a message.
+ */
+const TRANSIENT = new Set(['client', 'busy', 'network', 'network-timeout']);
 
 function recognizerReady(): boolean {
   try {
@@ -50,6 +57,10 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
   const [heard, setHeard] = useState('');
   const finals = useRef<string[]>([]);
   const subs = useRef<Sub[]>([]);
+  const failure = useRef<string | null>(null);
+  const retries = useRef(0);
+  const active = useRef(false);
+  const mounted = useRef(true);
   const onFinalRef = useRef(onFinal);
   onFinalRef.current = onFinal;
   const onProblemRef = useRef(onProblem);
@@ -61,49 +72,62 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
   }, []);
 
   useEffect(() => () => {
+    mounted.current = false;
     cleanup();
     try { mod?.abort(); } catch { /* already stopped */ }
   }, [cleanup]);
 
-  const start = useCallback(async () => {
-    if (!mod || !recognizerReady()) {
-      setAvailable(false);
-      return false;
-    }
-    const perm = await mod.requestPermissionsAsync().catch(() => ({ granted: false }));
-    if (!perm.granted) {
-      setAvailable(false);
-      return false;
-    }
-    cleanup();
+  /** Ends the tap: hands over what was heard, or explains why nothing was. */
+  const settle = useCallback(() => {
+    active.current = false;
+    setListening(false);
+    const text = finals.current.join(' ').trim();
     finals.current = [];
     setHeard('');
-    let failure: string | null = null;
+    if (text) return onFinalRef.current(text);
+    if (failure.current) return onProblemRef.current?.(copy.voiceFailed(failure.current));
+    onFinalRef.current('');
+  }, []);
+
+  /**
+   * Opens a recognizer session. `retry` keeps words already caught in this tap
+   * (and the retry budget), so a hiccup mid-dictation doesn't eat them.
+   */
+  const begin = useCallback((retry: boolean): boolean => {
+    cleanup();
+    if (!retry) {
+      finals.current = [];
+      retries.current = 0;
+    }
+    failure.current = null;
     subs.current = [
-      mod.addListener('result', (e) => {
+      mod!.addListener('result', (e) => {
         const text = e.results[0]?.transcript ?? '';
         if (e.isFinal) finals.current.push(text);
         setHeard([...finals.current, e.isFinal ? '' : text].join(' ').trim());
       }),
-      mod.addListener('error', (e) => {
+      mod!.addListener('error', (e) => {
         // "no-speech" and "aborted" are normal endings, not failures.
         if (NORMAL_ENDINGS.has(e.error)) return;
-        failure = e.error;
+        failure.current = e.error;
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') setAvailable(false);
       }),
-      mod.addListener('end', () => {
+      mod!.addListener('end', () => {
         cleanup();
-        setListening(false);
-        const text = finals.current.join(' ').trim();
-        finals.current = [];
-        setHeard('');
-        if (text) return onFinalRef.current(text);
-        if (failure) return onProblemRef.current?.(copy.voiceFailed(failure));
-        onFinalRef.current('');
+        // A transient failure with nothing caught: start a fresh session and keep listening,
+        // rather than making the person tap again into a recognizer that may just have restarted.
+        if (!finals.current.length && failure.current && TRANSIENT.has(failure.current) && retries.current < 1 && mounted.current) {
+          retries.current += 1;
+          setTimeout(() => {
+            if (active.current && mounted.current && !begin(true)) settle();
+          }, 300);
+          return;
+        }
+        settle();
       }),
     ];
     try {
-      mod.start({
+      mod!.start({
         lang: 'en-US',
         interimResults: true,
         // The phone's own recognizer with its own mic, the same path as keyboard dictation.
@@ -119,12 +143,34 @@ export function useDictation(onFinal: (transcript: string) => void, onProblem?: 
       });
     } catch {
       cleanup();
+      return false;
+    }
+    return true;
+  }, [cleanup, settle]);
+
+  const start = useCallback(async () => {
+    if (!mod || !recognizerReady()) {
       setAvailable(false);
       return false;
     }
+    // A session is still winding down; a second tap must not open a second one.
+    if (active.current) return false;
+    const perm = await mod.requestPermissionsAsync().catch(() => ({ granted: false }));
+    if (!perm.granted) {
+      setAvailable(false);
+      return false;
+    }
+    active.current = true;
+    if (!begin(false)) {
+      // The recognizer rejected the attempt outright (still busy). One retry covers the wind-down window.
+      retries.current = 1;
+      setTimeout(() => {
+        if (active.current && mounted.current && !begin(true)) settle();
+      }, 300);
+    }
     setListening(true);
     return true;
-  }, [cleanup]);
+  }, [begin, settle]);
 
   const stop = useCallback(() => {
     try { mod?.stop(); } catch { setListening(false); }
