@@ -83,6 +83,12 @@ Each repo keeps its own copy of the shared rules in `src/domain/` (model, reduce
 one of those here and make the same change there, or the phone and the browser stop
 understanding each other.
 
+CI holds the promise for you: a `shared-domain` job compares `src/domain/` with the web repo's
+copy (its branch of the same name if one exists, otherwise `main`) and fails on any difference
+(`scripts/check-shared-domain.mjs`). So a change to the shared rules goes out as a pair of
+same-named branches, one per repo. `src/domain/fixtures/sync-v1.json` is a real version 1 sync
+file; `persistence.test.ts` checks that both apps still read it.
+
 **Sync** goes through a WebDAV folder you already have (Nextcloud, Fastmail, rclone serve,
 any WebDAV server). Turn it on in Settings on each device with the same folder, username and an
 app password. The app writes `become-who-you-are.json` there, merges the other devices' changes on
