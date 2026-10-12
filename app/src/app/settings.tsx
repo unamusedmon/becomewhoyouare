@@ -3,9 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { firstStepTestProgress, firstStepTestResult } from '../domain/experiment';
 import { timeOfDay } from '../domain/intention';
+import { missingPractices, PRACTICES } from '../domain/practice';
 import { useApp } from '../state/AppStateContext';
 import { requestNudgePermission } from '../state/nudgeSync';
-import { s as shared, Toggle } from '../ui/components';
+import { Button, s as shared, Toggle } from '../ui/components';
 import { copy } from '../ui/copy';
 import { Screen, screenStyles } from '../ui/Screen';
 import { EncryptionSettings, OrgSettings, SyncSettings } from '../ui/SyncSettings';
@@ -29,6 +30,8 @@ export default function SettingsScreen() {
   const hhmm = (t: string) => { const [h, m] = t.split(':').map(Number); return timeOfDay(new Date(2026, 0, 1, h, m).toISOString()); };
   const test = firstStepTestResult(state.events, state.tasks);
   const testProgress = firstStepTestProgress(state.events);
+  const missing = missingPractices(state);
+  const addPractice = () => missing.forEach((p) => dispatch({ type: 'add_routine', id: p.id, title: p.title, cadence: p.cadence }));
 
   return (
     <Screen nav={{ href: '/becoming', label: copy.becomingLink }}>
@@ -81,6 +84,16 @@ export default function SettingsScreen() {
             </View>
           </>
         ) : null}
+      </View>
+
+      <View style={[st.section, st.setting]}>
+        <Text style={shared.label}>{o.practice}</Text>
+        <Text style={shared.faint}>{o.practiceNote}</Text>
+        {missing.length === 0 ? (
+          <Text style={st.settingText}>{o.practiceAdded}</Text>
+        ) : (
+          <Button label={missing.length === PRACTICES.length ? o.practiceAdd : o.practiceAddMissing(missing.length)} onPress={addPractice} />
+        )}
       </View>
 
       <View style={[st.section, st.setting]}>
